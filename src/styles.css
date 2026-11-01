@@ -553,3 +553,27 @@ a.btn { text-decoration: none; color: inherit; }
 .rows li.next-wave:not(.running) { background: #161616; }
 .next-mark { flex: none; font-size: 14px; margin-right: 4px; color: var(--white); }
 .rows .nm { min-width: 0; overflow: hidden; }
+
+/* ——— En-tête de séance (coach) ——— */
+.t-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 2px; }
+.live-chip { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px 0 12px; border-radius: 999px; background: var(--g1); border: 1px solid var(--g2); }
+.live-chip .pulse { position: relative; width: 9px; height: 9px; border-radius: 50%; background: var(--white); flex: none; }
+.live-chip .pulse::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--white); opacity: 0; animation: ping 2s ease-out infinite; }
+@keyframes ping { 0% { transform: scale(.6); opacity: .8; } 100% { transform: scale(1.8); opacity: 0; } }
+.live-chip.offline .pulse, .live-chip.error .pulse { background: transparent; border: 1.5px solid var(--g4); }
+.live-chip.offline .pulse::after, .live-chip.error .pulse::after { display: none; }
+.live-chip.pending .pulse { animation: blink .8s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .3; } }
+.live-txt { display: flex; flex-direction: column; line-height: 1.05; }
+.live-txt small { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--g4); }
+.live-txt b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.t-actions { display: flex; align-items: center; gap: 8px; }
+.icon-btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--g1); border: 1px solid var(--g2); color: var(--white); transition: background 120ms, transform 90ms; }
+.icon-btn:active { transform: scale(.94); background: var(--g2); }
+.end-btn { height: 44px; padding: 0 16px 0 14px; border-radius: 999px; display: flex; align-items: center; gap: 8px; background: var(--white); color: var(--black); font-size: 15px; font-weight: 800; letter-spacing: .01em; transition: transform 90ms; }
+.end-btn:active { transform: scale(.96); }
+.hint-line { margin: 0; text-align: center; font-size: 14px; line-height: 1.35; color: var(--g4); }
+.hint-line b { color: #d0d0d0; font-weight: 700; }
+.hint-line span { display: block; font-size: 12px; color: #5c5c5c; }
+.order-btn { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--white) !important; text-decoration: none; white-space: nowrap; overflow: hidden; }
+.order-btn .run-count { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: none; color: var(--g4); margin-left: 2px; }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { KIND_LABEL, type Kind, type Session, type Tap } from '../core/model'
 import { autoKind, computeAll, pendingTaps, type AthleteResult } from '../core/results'
-import { fmtClock, fmtDuration, fmtHM } from '../core/format'
+import { fmtClock, fmtDuration } from '../core/format'
 import type { Store } from '../store/useSession'
 import { useWakeLock } from '../device/wakeLock'
 import { useNow } from '../device/useNow'
@@ -17,6 +17,14 @@ import type { SyncState } from '../cloud/sync'
 import { serverNow, toServer } from '../cloud/clock'
 
 interface Toast { text: string; extra?: string; undo: Tap[] }
+
+/** Durée de la séance : 4:05 ou 1:02:03. */
+const fmtElapsed = (ms: number) => {
+  const s = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, sec = s % 60
+  const p = (n: number) => String(n).padStart(2, '0')
+  return h ? `${h}:${p(m)}:${p(sec)}` : `${m}:${p(sec)}`
+}
 
 const SHORT: Record<Kind, string> = { start: 'DÉP', split: 'INT', finish: 'ARR' }
 
@@ -127,20 +135,27 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
 
   return (
     <div class="screen timer board">
-      <header class="timer-head px">
-        <span class="label">
-          {fmtHM(session.createdAt)}
-          {sync !== 'off' && (
-            <span class={`sync ${sync}`} title={SYNC_LABEL[sync]} aria-label={SYNC_LABEL[sync]}>
-              {' '}{sync === 'ok' ? '●' : sync === 'pending' ? '◐' : `○ ${SYNC_LABEL[sync]}`}
-            </span>
+      <header class="t-head px">
+        <div class={`live-chip ${sync}`} title={SYNC_LABEL[sync] || 'Séance en cours'}>
+          <span class="pulse" aria-hidden="true" />
+          <span class="live-txt">
+            <small>{sync === 'offline' ? 'Hors ligne' : sync === 'error' ? 'Synchro' : 'En direct'}</small>
+            <b class="mono">{fmtElapsed(now - session.createdAt)}</b>
+          </span>
+        </div>
+        <nav class="t-actions">
+          {session.code && (
+            <button class="icon-btn" onClick={() => setShareOpen(true)} aria-label="Partager la séance">
+              <Icon name="link" size={20} stroke={2.2} />
+            </button>
           )}
-        </span>
-        <span style={{ display: 'flex', gap: 6 }}>
-          {session.code && <button class="pill outline" onClick={() => setShareOpen(true)}>Partager</button>}
-          <button class="pill outline" onClick={() => setLog(true)}>Journal</button>
-          <button class="pill solid" onClick={() => setConfirm(true)}>Terminer</button>
-        </span>
+          <button class="icon-btn" onClick={() => setLog(true)} aria-label="Journal des temps">
+            <Icon name="list" size={20} stroke={2.2} />
+          </button>
+          <button class="end-btn" onClick={() => setConfirm(true)}>
+            <Icon name="flag" size={16} stroke={2.4} />Terminer
+          </button>
+        </nav>
       </header>
 
       <div class="status">
@@ -168,12 +183,17 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
             <Icon name="check" />
           </div>
         ) : (
-          <div class="last">LOGO, PUIS BOUTON DE L'ATHLÈTE · NOM = CORRIGER</div>
+          <p class="hint-line">
+            Touchez le <b>logo</b>, puis le bouton de l'athlète.
+            <span>Un nom pour corriger.</span>
+          </p>
         )}
       </div>
 
       <div class={`rows-head px n${kinds.length}`}>
-        <button class="label order-btn" onClick={() => setOrderOpen(true)}>Ordre ✎{running.length ? ` · ${running.length} ●` : ''}</button>
+        <button class="order-btn" onClick={() => setOrderOpen(true)} aria-label="Modifier l'ordre de départ">
+          <Icon name="edit" size={13} stroke={2.4} />Ordre
+        </button>
         <span class="label">Temps</span>
         {kinds.map((k) => <span key={k} class="label c">{SHORT[k]}</span>)}
       </div>
