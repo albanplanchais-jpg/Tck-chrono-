@@ -63,7 +63,7 @@ export function AssignSheet({ session, tap, mode, inline = false, total = 1, onC
     onAssign(picked.map((id) => ({ athleteId: id, kind: kindFor(state.find((r) => r.athlete.id === id)!) })))
 
   const hint =
-    multi ? 'Touchez chaque athlète' : kind === 'start' ? 'Athlètes pas partis' : kind ? 'Athlètes en course' : 'Auto selon la course'
+    multi ? 'Touchez chaque athlète' : kind === 'start' ? 'Athlètes pas partis' : kind ? 'Athlètes en course' : splits > 0 ? 'En course → inter puis arrivée' : 'En course → arrivée'
 
   return (
     <section class={`sheet ${inline ? 'inline' : ''}`} aria-label={mode === 'edit' ? 'Modifier le tap' : 'Attribuer le tap'}>

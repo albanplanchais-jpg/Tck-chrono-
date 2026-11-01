@@ -31,10 +31,6 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
   const pending = useMemo(() => pendingTaps(session), [session])
   const running = results.filter((r) => r.openStart !== undefined).sort((a, b) => a.openStart! - b.openStart!)
   const current = pending[0]
-  const autoGroupKind: Kind = !running.length
-    ? 'start'
-    : splits > 0 && running.some((r) => r.openSplits.length < splits) ? 'split' : 'finish'
-  const groupKind = manualKind ?? autoGroupKind
   const groupKinds: Kind[] = splits > 0 ? ['start', 'split', 'finish'] : ['start', 'finish']
   const nameOf = (id?: string) => session.athletes.find((a) => a.id === id)?.name ?? '?'
   const last = useMemo(
@@ -62,7 +58,9 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
     tapFeedback()
     // Le bouton ne bouge jamais. Chaque impulsion ouvre le volet ; si le volet est
     // déjà ouvert, elle est mise en attente et attribuée juste après, dans l'ordre.
-    store.addTap(t, groupKind)
+    // Auto (par défaut) : pas de type imposé, c'est l'athlète choisi qui décide
+    // (en course → inter / arrivée, pas parti → départ). Sinon type forcé.
+    store.addTap(t, manualKind ?? undefined)
     setSheet(true)
   }
 
@@ -100,8 +98,8 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
               {groupKinds.map((k) => (
                 <button
                   key={k}
-                  class={groupKind === k ? 'on' : ''}
-                  aria-pressed={groupKind === k}
+                  class={manualKind === k ? 'on' : ''}
+                  aria-pressed={manualKind === k}
                   onClick={() => setManualKind(manualKind === k ? null : k)}
                 >
                   {KIND_LABEL[k]}
@@ -190,7 +188,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
             onContextMenu={(e) => e.preventDefault()}
           >
             <img src="/logo.png" alt="" draggable={false} />
-            <small class="tap-kind">{KIND_LABEL[groupKind]}</small>
+            <small class="tap-kind">{manualKind ? KIND_LABEL[manualKind] : 'AUTO'}</small>
             {pending.length > 0 && <span class="tap-count">{pending.length}</span>}
           </button>
         </div>
