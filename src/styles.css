@@ -284,3 +284,53 @@ h1 { font-size: 38px; font-weight: 900; letter-spacing: -.02em; line-height: 1.0
 .segment.n3 { grid-template-columns: repeat(3, 1fr); }
 .runs .run-splits.mono { font-size: 12px; font-weight: 700; color: var(--g4); }
 .live.compact li { height: 40px; }
+
+/* ——— Mode groupé (rafale de taps puis attribution dans l'ordre) ——— */
+.group-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.seg-sm.two { grid-template-columns: repeat(2, 96px); }
+.seg-sm.two button { font-family: var(--font); font-size: 13px; font-weight: 900; letter-spacing: .08em; }
+.tap { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.tap-kind { font-size: min(15px, 5cqh); font-weight: 900; letter-spacing: .14em; margin-top: 6px; }
+.assign-batch { width: auto; text-align: left; }
+.assign-batch .go { font-size: 15px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; border-left: 2px solid var(--black); padding-left: 12px; height: 100%; display: flex; align-items: center; }
+.foot.split { justify-content: space-between; align-items: center; padding-left: var(--pad); padding-right: var(--pad); }
+.grp-toggle { height: 48px; display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; }
+.grp-toggle .sw { width: 42px; height: 24px; border: 2px solid var(--white); border-radius: 999px; position: relative; flex: none; }
+.grp-toggle .sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--white); transition: transform 150ms var(--ease); }
+.grp-toggle.on .sw { background: var(--white); }
+.grp-toggle.on .sw::after { background: var(--black); transform: translateX(18px); }
+
+/* ——— TAP toujours au même endroit ——— */
+.timer .main { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.timer .main .live { margin: 12px var(--pad) 0; max-height: none; overflow-y: auto; }
+.status { height: 58px; flex: none; margin: 8px var(--pad) 0; display: flex; align-items: center; justify-content: center; }
+.status .confirm { margin: 0; width: 100%; }
+.tap-dock { flex: none; height: min(230px, 28vh); container-type: size; display: grid; place-items: center; margin-top: 8px; }
+.tap-dock .ring { width: min(100cqh, 100cqw); aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--g3); display: grid; place-items: center; }
+.tap-dock .tap { width: 86.6%; font-size: min(64px, 24cqh); position: relative; }
+.tap-count { position: absolute; top: 4%; right: 4%; min-width: 34px; height: 34px; padding: 0 8px; border-radius: 999px; background: var(--black); color: var(--white); border: 2px solid var(--white); font-family: var(--mono); font-size: 15px; font-weight: 800; display: grid; place-items: center; }
+.tap.pressed .tap-count { background: var(--white); color: var(--black); }
+
+.sheet.inline { position: static; flex: 1; min-height: 0; max-height: none; margin-top: 12px; padding: 10px var(--pad); gap: 10px; animation: fade 140ms; }
+.sheet.inline .sheet-head { align-items: center; }
+.sheet.inline .clock { font-size: 30px; }
+.sheet.inline .segment button { height: 46px; }
+.sheet.inline .athlete { height: 54px; }
+.sheet.inline .grid.dense .athlete { height: 48px; }
+.sheet.inline .grid.dense .athlete .nm { font-size: 14px; }
+.sheet.inline .btn { height: 48px; font-size: 15px; }
+.head-links { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.head-links button { font-size: 14px; font-weight: 700; color: var(--g4); text-decoration: underline; text-underline-offset: 3px; padding: 6px 0; }
+.live.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.live.compact li { min-width: 0; }
+.live.compact .who { flex: 1; min-width: 0; overflow: hidden; }
+.live.compact .t { flex: none; font-size: 16px; }
+.live.compact .nm small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tap-dock { height: min(210px, 25vh); }
+.sheet.inline { padding: 8px var(--pad); gap: 8px; }
+.sheet.inline .clock { font-size: 26px; }
+.sheet.inline .label { font-size: 12px; }
+.sheet.inline .segment button { height: 42px; }
+.sheet.inline .qui strong { font-size: 19px; }
+.sheet.inline .grid.dense { gap: 5px; }
+.sheet.inline .grid.dense .athlete { height: 44px; }

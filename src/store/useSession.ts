@@ -44,9 +44,9 @@ export function useSessionStore() {
   )
 
   const addTap = useCallback(
-    (t: number) => {
+    (t: number, kind?: Kind) => {
       const id = uid()
-      patchTaps((taps) => [...taps, { id, t }])
+      patchTaps((taps) => [...taps, kind ? { id, t, kind } : { id, t }])
       return id
     },
     [patchTaps]

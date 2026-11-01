@@ -11,6 +11,8 @@ interface Props {
   tap: Tap
   /** 'new' = tap à attribuer ; 'edit' = réattribuer un tap existant. */
   mode: 'new' | 'edit'
+  /** Intégré à l'écran (au-dessus du TAP) plutôt qu'en panneau superposé. */
+  inline?: boolean
   total?: number
   onCapture?: (e: PointerEvent) => void
   onAssign: (items: Assignment[]) => void
@@ -20,16 +22,17 @@ interface Props {
 
 const SHORT: Record<Kind, string> = { start: 'DÉP', split: 'INT', finish: 'ARR' }
 
-export function AssignSheet({ session, tap, mode, total = 1, onCapture, onAssign, onVoid, onClose }: Props) {
+export function AssignSheet({ session, tap, mode, inline = false, total = 1, onCapture, onAssign, onVoid, onClose }: Props) {
   const splits = session.splits ?? 0
   // null = automatique : départ si pas parti, sinon inter (si prévu) puis arrivée.
-  const [kind, setKind] = useState<Kind | null>(mode === 'edit' ? tap.kind ?? null : null)
+  // Un tap pris en mode groupé arrive avec son type déjà choisi (inter / arrivée).
+  const [kind, setKind] = useState<Kind | null>(tap.kind ?? null)
   const [multi, setMulti] = useState(false)
   const [picked, setPicked] = useState<string[]>([])
   const [pressed, setPressed] = useState(false)
 
   useEffect(() => {
-    setKind(mode === 'edit' ? tap.kind ?? null : null)
+    setKind(tap.kind ?? null)
     setMulti(false)
     setPicked([])
   }, [tap.id])
@@ -37,7 +40,13 @@ export function AssignSheet({ session, tap, mode, total = 1, onCapture, onAssign
   const state = useMemo(() => stateAt(session, tap), [session, tap])
   const kindFor = (r: AthleteResult): Kind => kind ?? autoKind(r, splits)
   const isRunning = (r: AthleteResult) => r.openStart !== undefined
-  const allowed = (r: AthleteResult) => kind === null || (kind === 'start') !== isRunning(r)
+  const allowed = (r: AthleteResult) => {
+    if (kind === null) return true
+    if (kind === 'start') return !isRunning(r)
+    if (!isRunning(r)) return false
+    // inter : seulement ceux qui n'ont pas encore fait tous leurs inters
+    return kind !== 'split' || r.openSplits.length < Math.max(splits, 1)
+  }
   const idle = state.filter((r) => !isRunning(r))
 
   const kinds: Kind[] = splits > 0 ? ['start', 'split', 'finish'] : ['start', 'finish']
@@ -54,19 +63,25 @@ export function AssignSheet({ session, tap, mode, total = 1, onCapture, onAssign
     onAssign(picked.map((id) => ({ athleteId: id, kind: kindFor(state.find((r) => r.athlete.id === id)!) })))
 
   const hint =
-    kind === 'start' ? 'Athlètes pas partis' : kind ? 'Athlètes en course' : multi ? 'Touchez chaque athlète' : 'Auto selon la course'
+    multi ? 'Touchez chaque athlète' : kind === 'start' ? 'Athlètes pas partis' : kind ? 'Athlètes en course' : 'Auto selon la course'
 
   return (
-    <section class="sheet" aria-label={mode === 'edit' ? 'Modifier le tap' : 'Attribuer le tap'}>
-      <div class="handle" aria-hidden="true" />
+    <section class={`sheet ${inline ? 'inline' : ''}`} aria-label={mode === 'edit' ? 'Modifier le tap' : 'Attribuer le tap'}>
+      {!inline && <div class="handle" aria-hidden="true" />}
       <div class="sheet-head">
         <div>
           <span class="label">
-            {mode === 'edit' ? 'Modifier le tap' : 'Tap à'}
+            {mode === 'edit' ? 'Modifier le tap' : tap.kind ? `Passage · ${KIND_LABEL[tap.kind]}` : 'Tap à'}
             {total > 1 ? ` · 1 / ${total}` : ''}
           </span>
           <span class="mono clock">{fmtClock(tap.t)}</span>
         </div>
+        {inline && !multi && (
+          <div class="head-links">
+            <button onClick={onVoid}>Annuler ce tap</button>
+            <button onClick={onClose}>Plus tard</button>
+          </div>
+        )}
         {onCapture && (
           <button
             class={`mini-tap ${pressed ? 'pressed' : ''}`}
@@ -92,9 +107,15 @@ export function AssignSheet({ session, tap, mode, total = 1, onCapture, onAssign
       <div class="qui">
         <strong>Qui ?</strong>
         <span>{hint}</span>
-        <button class={`multi ${multi ? 'on' : ''}`} aria-pressed={multi} onClick={() => { setMulti(!multi); setPicked([]) }}>
-          Groupé
-        </button>
+        {(multi || (mode === 'new' && !tap.kind && kind !== 'split' && kind !== 'finish' && idle.length > 1)) && (
+          <button
+            class={`multi ${multi ? 'on' : ''}`}
+            aria-pressed={multi}
+            onClick={() => { setMulti(!multi); setKind(multi ? null : 'start'); setPicked([]) }}
+          >
+            Départ groupé
+          </button>
+        )}
       </div>
 
       <div class={`grid ${state.length > 6 ? 'dense' : ''}`}>
@@ -123,12 +144,10 @@ export function AssignSheet({ session, tap, mode, total = 1, onCapture, onAssign
         })}
       </div>
 
-      <div class="sheet-actions">
+      {(!inline || multi) && <div class="sheet-actions">
         {multi ? (
           <>
-            {kind !== 'finish' && kind !== 'split' && idle.length > 1 && (
-              <button class="btn outline" onClick={() => setPicked(idle.map((r) => r.athlete.id))}>Tous les pas partis</button>
-            )}
+            <button class="btn outline full" onClick={() => setPicked(idle.map((r) => r.athlete.id))}>Tous les pas partis</button>
             <button class="btn primary full" disabled={!picked.length} onClick={confirmMulti}>
               Valider · {picked.length} athlète{picked.length > 1 ? 's' : ''}
             </button>
@@ -141,7 +160,7 @@ export function AssignSheet({ session, tap, mode, total = 1, onCapture, onAssign
             </button>
           </>
         )}
-      </div>
+      </div>}
     </section>
   )
 }

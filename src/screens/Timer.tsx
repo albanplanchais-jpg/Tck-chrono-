@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import { KIND_LABEL, type Session, type Tap } from '../core/model'
+import { KIND_LABEL, type Kind, type Session, type Tap } from '../core/model'
 import { computeAll, pendingTaps, stateAt } from '../core/results'
 import { fmtClock, fmtDuration, fmtHM } from '../core/format'
 import type { Store } from '../store/useSession'
@@ -22,6 +22,10 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
   const [toast, setToast] = useState<Toast | null>(null)
   const [pressed, setPressed] = useState(false)
   const [log, setLog] = useState(false)
+  // Mode groupé : on choisit inter / arrivée, on tape à chaque passage, on attribue ensuite dans l'ordre.
+  const [group, setGroup] = useState(false)
+  const [groupKind, setGroupKind] = useState<Kind>('finish')
+  const splits = session.splits ?? 0
   const toastTimer = useRef<number | undefined>(undefined)
 
   const results = useMemo(() => computeAll(session), [session])
@@ -45,9 +49,11 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
   /** Instant exact du contact du doigt (pas du relâchement). */
   const capture = (e: PointerEvent) => {
     e.preventDefault()
-    store.addTap(performance.timeOrigin + e.timeStamp)
+    const t = performance.timeOrigin + e.timeStamp
     tapFeedback()
-    setSheet(true)
+    // Le bouton ne bouge jamais : chaque tap est mis en file, on attribue dans l'ordre.
+    store.addTap(t, group ? groupKind : undefined)
+    if (!group) setSheet(true)
   }
 
   const onAssign = (tap: Tap, items: Assignment[]) => {
@@ -64,55 +70,79 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
 
   const passages = results.reduce((n, r) => n + r.runs.length, 0)
 
+  const panel = sheet && current
+
   return (
     <div class="screen timer">
       <header class="timer-head px">
         <span class="label">Séance · {fmtHM(session.createdAt)}</span>
         <span style={{ display: 'flex', gap: 8 }}>
           <button class="pill outline" onClick={() => setLog(true)}>Journal</button>
-          {pending.length > 0 && !sheet && (
-            <button class="pill outline" onClick={() => setSheet(true)}>{pending.length} à attribuer</button>
-          )}
           <span class="pill solid">{running.length} en course</span>
         </span>
       </header>
 
-      <ul class={`live ${running.length > 4 ? 'compact' : ''}`} style={{ margin: '12px 16px 0' }}>
-        {running.length === 0 && <li class="none">Personne en course</li>}
-        {running.map((r) => (
-          <li key={r.athlete.id}>
-            <span class="who">
-              <span class="dot" />
-              <span class="nm">
-                {r.athlete.name}
-                {r.openSplits.length > 0 && (
-                  <small class="mono">INT{r.openSplits.length} {fmtDuration(r.openSplits[r.openSplits.length - 1])}</small>
-                )}
-              </span>
-            </span>
-            <span class="t">{fmtDuration(now - r.openStart!)}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div class="tap-zone">
-        <div class="tap-ring">
-          <div>
-            <button
-              class={`tap ${pressed ? 'pressed' : ''}`}
-              aria-label="TAP — capturer le temps"
-              onPointerDown={(e) => { setPressed(true); capture(e) }}
-              onPointerUp={() => setPressed(false)}
-              onPointerCancel={() => setPressed(false)}
-              onPointerLeave={() => setPressed(false)}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              TAP
-            </button>
+      <div class="main">
+        {group && !panel && (
+          <div class="group-bar px">
+            <span class="label white">Groupé</span>
+            {splits > 0 ? (
+              <div class="seg-sm two" role="group" aria-label="Type des passages groupés">
+                {(['split', 'finish'] as Kind[]).map((k) => (
+                  <button key={k} class={groupKind === k ? 'on' : ''} aria-pressed={groupKind === k} onClick={() => setGroupKind(k)}>
+                    {KIND_LABEL[k]}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span class="pill solid">ARRIVÉE</span>
+            )}
           </div>
-        </div>
-        {toast ? (
-          <div class="confirm" role="status" style={{ alignSelf: 'stretch' }}>
+        )}
+
+        {panel ? (
+          <AssignSheet
+            inline
+            session={session}
+            tap={current}
+            mode="new"
+            total={pending.length}
+            onAssign={(items) => onAssign(current, items)}
+            onVoid={() => store.voidTap(current.id)}
+            onClose={() => setSheet(false)}
+          />
+        ) : (
+          <ul class={`live ${running.length > 4 ? 'compact' : ''}`}>
+            {running.length === 0 && <li class="none">Personne en course</li>}
+            {running.map((r) => (
+              <li key={r.athlete.id}>
+                <span class="who">
+                  <span class="dot" />
+                  <span class="nm">
+                    {r.athlete.name}
+                    {r.openSplits.length > 0 && (
+                      <small class="mono">INT{r.openSplits.length} {fmtDuration(r.openSplits[r.openSplits.length - 1])}</small>
+                    )}
+                  </span>
+                </span>
+                <span class="t">{fmtDuration(now - r.openStart!)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div class="status">
+        {!panel && pending.length > 0 ? (
+          <button class="confirm assign-batch" onClick={() => setSheet(true)}>
+            <span class="txt">
+              <b>{pending.length} passage{pending.length > 1 ? 's' : ''} à attribuer</b>
+              <span class="mono">dernier · {fmtClock(pending[pending.length - 1].t)}</span>
+            </span>
+            <span class="go">Attribuer</span>
+          </button>
+        ) : toast ? (
+          <div class="confirm" role="status">
             <span class="txt">
               <b>{toast.name} — {toast.kind}</b>
               <span class="mono">{toast.extra ?? fmtClock(toast.t)}</span>
@@ -122,30 +152,47 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
           </div>
         ) : (
           <div class="last">
-            {last ? `DERNIER · ${nameOf(last.athleteId)} — ${KIND_LABEL[last.kind!]} · ${fmtClock(last.t)}` : 'Touchez TAP au départ ou à l\'arrivée'}
+            {group
+              ? 'TAPEZ À CHAQUE PASSAGE · ATTRIBUEZ ENSUITE'
+              : last
+                ? `DERNIER · ${nameOf(last.athleteId)} — ${KIND_LABEL[last.kind!]} · ${fmtClock(last.t)}`
+                : "Touchez TAP au départ ou à l'arrivée"}
           </div>
         )}
       </div>
 
-      <div class="foot">
-        <button class="link" onClick={() => setConfirm(true)}>Terminer la séance</button>
+      {/* Zone fixe : le TAP est toujours au même endroit et toujours cliquable. */}
+      <div class="tap-dock">
+        <div class="ring">
+          <button
+            class={`tap ${pressed ? 'pressed' : ''}`}
+            aria-label="TAP — capturer le temps"
+            onPointerDown={(e) => { setPressed(true); capture(e) }}
+            onPointerUp={() => setPressed(false)}
+            onPointerCancel={() => setPressed(false)}
+            onPointerLeave={() => setPressed(false)}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            TAP
+            {group && <small class="tap-kind">{KIND_LABEL[groupKind]}</small>}
+            {pending.length > 0 && <span class="tap-count">{pending.length}</span>}
+          </button>
+        </div>
       </div>
 
-      {sheet && current && (
-        <>
-          <div class="scrim" onClick={() => setSheet(false)} />
-          <AssignSheet
-            session={session}
-            tap={current}
-            mode="new"
-            total={pending.length}
-            onCapture={capture}
-            onAssign={(items) => onAssign(current, items)}
-            onVoid={() => store.voidTap(current.id)}
-            onClose={() => setSheet(false)}
-          />
-        </>
-      )}
+      <div class="foot split">
+        <button
+          class={`grp-toggle ${group ? 'on' : ''}`}
+          aria-pressed={group}
+          onClick={() => {
+            setGroup(!group)
+            setGroupKind(splits > 0 && running.some((r) => r.openSplits.length < splits) ? 'split' : 'finish')
+          }}
+        >
+          <span class="sw" />Groupé
+        </button>
+        <button class="link" onClick={() => setConfirm(true)}>Terminer</button>
+      </div>
 
       {log && <TapLog store={store} session={session} onClose={() => setLog(false)} />}
 
