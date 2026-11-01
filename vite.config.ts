@@ -7,10 +7,10 @@ export default defineConfig({
     preact(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/favicon.svg', 'icons/apple-touch-icon.png'],
+      includeAssets: ['icons/favicon-64.png', 'icons/apple-touch-icon.png', 'logo.png'],
       manifest: {
-        name: 'TCK Chrono',
-        short_name: 'TCK Chrono',
+        name: 'TCK Chrono — Torcy Canoë-Kayak',
+        short_name: 'TCK Chrono — Torcy Canoë-Kayak',
         description: 'Chronométrage simple pour le coach',
         lang: 'fr',
         display: 'standalone',

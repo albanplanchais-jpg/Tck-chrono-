@@ -334,3 +334,21 @@ h1 { font-size: 38px; font-weight: 900; letter-spacing: -.02em; line-height: 1.0
 .sheet.inline .qui strong { font-size: 19px; }
 .sheet.inline .grid.dense { gap: 5px; }
 .sheet.inline .grid.dense .athlete { height: 44px; }
+
+/* ——— Logo ——— */
+.head.brand { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.head.brand img { width: 72px; height: 72px; flex: none; margin-right: -6px; }
+.tap.logo { width: 100%; background: var(--black); border: 0; color: var(--white); overflow: visible; }
+.tap.logo img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; transition: filter 90ms linear; }
+.tap.logo.pressed { background: var(--white); transform: scale(.94); }
+.tap.logo.pressed img { filter: invert(1); }
+.tap.logo .tap-kind { position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%); margin: 0; background: var(--white); color: var(--black); padding: 4px 10px; font-size: 12px; letter-spacing: .12em; white-space: nowrap; }
+.tap.logo.pressed .tap-kind { background: var(--black); color: var(--white); }
+.tap-dock .ring { border: 0; }
+.seg-sm.kinds { grid-template-columns: repeat(var(--n, 2), 86px); }
+.seg-sm.kinds.n3 { --n: 3; }
+.seg-sm.kinds button { font-family: var(--font); font-size: 12px; font-weight: 900; letter-spacing: .06em; }
+.tap.logo.pressed { background: var(--black); transform: scale(.92); box-shadow: 0 0 0 4px var(--white); }
+.tap.logo.pressed img { filter: none; opacity: .75; }
+.tap.logo.pressed .tap-kind { background: var(--white); color: var(--black); }
+.seg-sm.kinds { grid-template-columns: repeat(var(--n, 2), 80px); }

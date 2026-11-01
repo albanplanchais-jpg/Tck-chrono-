@@ -28,9 +28,12 @@ export function Setup({ store }: { store: Store }) {
   return (
     <div class="screen setup">
       <div class="scroll px">
-        <header class="head">
-          <span class="label">{fmtDay(Date.now())}</span>
-          <h1>Nouvelle séance</h1>
+        <header class="head brand">
+          <div>
+            <span class="label">{fmtDay(Date.now())}</span>
+            <h1>Nouvelle séance</h1>
+          </div>
+          <img src="/logo.png" alt="Torcy Canoë-Kayak" width={72} height={72} />
         </header>
 
         {hint && (

@@ -107,11 +107,11 @@ export function AssignSheet({ session, tap, mode, inline = false, total = 1, onC
       <div class="qui">
         <strong>Qui ?</strong>
         <span>{hint}</span>
-        {(multi || (mode === 'new' && !tap.kind && kind !== 'split' && kind !== 'finish' && idle.length > 1)) && (
+        {(multi || (mode === 'new' && (kind === null || kind === 'start') && idle.length > 1)) && (
           <button
             class={`multi ${multi ? 'on' : ''}`}
             aria-pressed={multi}
-            onClick={() => { setMulti(!multi); setKind(multi ? null : 'start'); setPicked([]) }}
+            onClick={() => { setMulti(!multi); setKind(multi ? tap.kind ?? null : 'start'); setPicked([]) }}
           >
             Départ groupé
           </button>
