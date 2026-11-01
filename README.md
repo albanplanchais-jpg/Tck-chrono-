@@ -37,5 +37,6 @@ src/device/     wake lock, bip/vibration, partage
 ```
 
 ## Feuille de route
+- V1.1 (fait) : chrono inter (0–3 par passage), départ/arrivée groupés, journal pour réattribuer, affichage dense 15+ athlètes
 - V1.5 : compte coach (code par e‑mail) + synchro Supabase + historique
 - V2 : deux téléphones synchronisés (départ / arrivée)

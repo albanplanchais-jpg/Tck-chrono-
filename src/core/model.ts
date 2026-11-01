@@ -1,4 +1,4 @@
-export type Kind = 'start' | 'finish'
+export type Kind = 'start' | 'split' | 'finish'
 
 export interface Athlete {
   id: string
@@ -20,7 +20,11 @@ export interface Session {
   endedAt?: number
   athletes: Athlete[]
   taps: Tap[]
+  /** Nombre de chronos intermédiaires attendus par passage (0 = aucun). */
+  splits?: number
 }
+
+export const KIND_LABEL: Record<Kind, string> = { start: 'DÉPART', split: 'INTER', finish: 'ARRIVÉE' }
 
 export const uid = (): string =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto

@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { uid, type Athlete, type Kind, type Session, type Tap } from '../core/model'
+import { get, set } from 'idb-keyval'
 import { archive, loadRoster, loadSession, saveRoster, saveSession } from './db'
 
 export function useSessionStore() {
   const [ready, setReady] = useState(false)
   const [session, setSession] = useState<Session | undefined>()
   const [roster, setRoster] = useState<Athlete[]>([])
+  const [lastSplits, setLastSplits] = useState(0)
   const loaded = useRef(false)
 
   useEffect(() => {
-    Promise.all([loadSession(), loadRoster()]).then(([s, r]) => {
+    Promise.all([loadSession(), loadRoster(), get<number>('splits')]).then(([s, r, sp]) => {
       setSession(s)
       setRoster(r)
+      setLastSplits(sp ?? 0)
       loaded.current = true
       setReady(true)
     })
@@ -27,13 +30,15 @@ export function useSessionStore() {
   }, [])
 
   const start = useCallback(
-    (athletes: Athlete[]) => {
+    (athletes: Athlete[], splits = 0) => {
+      setLastSplits(splits)
+      set('splits', splits)
       const byName = new Map(roster.map((a) => [a.name.toLowerCase(), a]))
       athletes.forEach((a) => byName.set(a.name.toLowerCase(), a))
       const next = [...athletes, ...roster.filter((a) => !athletes.some((x) => x.name.toLowerCase() === a.name.toLowerCase()))].slice(0, 60)
       setRoster(next)
       saveRoster(next)
-      setSession({ id: uid(), createdAt: Date.now(), athletes, taps: [] })
+      setSession({ id: uid(), createdAt: Date.now(), athletes, taps: [], splits })
     },
     [roster]
   )
@@ -47,22 +52,19 @@ export function useSessionStore() {
     [patchTaps]
   )
 
-  const assign = useCallback(
-    (id: string, athleteId: string, kind: Kind) =>
-      patchTaps((taps) => taps.map((x) => (x.id === id ? { ...x, athleteId, kind, voided: false } : x))),
-    [patchTaps]
-  )
-
-  /** Départ groupé : le même instant devient un départ pour chaque athlète donné. */
-  const massStart = useCallback(
-    (id: string, athleteIds: string[]) =>
+  /**
+   * Attribue un tap à un ou plusieurs athlètes (départ / arrivée groupés) :
+   * le premier garde le tap, les autres reçoivent un tap au même instant.
+   */
+  const assignMany = useCallback(
+    (id: string, items: { athleteId: string; kind: Kind }[]) =>
       patchTaps((taps) => {
         const src = taps.find((x) => x.id === id)
-        if (!src || !athleteIds.length) return taps
-        const [first, ...rest] = athleteIds
+        if (!src || !items.length) return taps
+        const [first, ...rest] = items
         return [
-          ...taps.map((x) => (x.id === id ? { ...x, athleteId: first, kind: 'start' as Kind } : x)),
-          ...rest.map((a) => ({ id: uid(), t: src.t, athleteId: a, kind: 'start' as Kind }))
+          ...taps.map((x) => (x.id === id ? { ...x, ...first, voided: false } : x)),
+          ...rest.map((it) => ({ id: uid(), t: src.t, ...it }))
         ]
       }),
     [patchTaps]
@@ -86,7 +88,7 @@ export function useSessionStore() {
     setSession(undefined)
   }, [session])
 
-  return { ready, session, roster, lastGroup, start, addTap, assign, massStart, restore, voidTap, end, resume, reset }
+  return { ready, session, roster, lastGroup, lastSplits, start, addTap, assignMany, restore, voidTap, end, resume, reset }
 }
 
 export type Store = ReturnType<typeof useSessionStore>

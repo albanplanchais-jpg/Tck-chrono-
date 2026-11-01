@@ -5,11 +5,13 @@ import { fmtDay, fmtDuration, fmtGap, fmtHM } from '../core/format'
 import type { Store } from '../store/useSession'
 import { shareResults } from '../device/share'
 import { Icon } from '../components/Icon'
+import { TapLog } from '../components/TapLog'
 
 export function Results({ store, session }: { store: Store; session: Session }) {
   const rows = useMemo(() => ranking(session), [session])
   const [open, setOpen] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
+  const [log, setLog] = useState(false)
 
   const share = async () => {
     const r = await shareResults(session)
@@ -26,17 +28,20 @@ export function Results({ store, session }: { store: Store; session: Session }) 
           <h1>Résultats</h1>
           <span class="res-sub">{fmtDay(session.createdAt)} · {fmtHM(session.createdAt)} – {fmtHM(session.endedAt!)}</span>
         </div>
-        <button class="link" style={{ padding: '0 0 0 12px', fontSize: 15, color: 'var(--g4)' }} onClick={store.resume}>Reprendre</button>
+        <div class="res-actions">
+          <button class="link" onClick={() => setLog(true)}>Corriger</button>
+          <button class="link" onClick={store.resume}>Reprendre</button>
+        </div>
       </header>
 
       <div class="cols label" style={{ fontSize: 12 }}>
         <span>Rang</span><span>Athlète</span><span>Meilleur</span>
       </div>
 
-      <ol class="scroll ranking">
+      <ol class={`scroll ranking ${rows.length > 8 ? 'dense' : ''}`}>
         {rows.map((r) => {
           const expanded = open === r.athlete.id
-          const multi = r.runs.length > 1
+          const multi = r.runs.length > 1 || r.runs.some((x) => x.splits.length > 0)
           return (
             <li key={r.athlete.id} class={r.rank === 1 ? 'first' : ''}>
               <button
@@ -59,9 +64,16 @@ export function Results({ store, session }: { store: Store; session: Session }) 
                 <ul class="runs">
                   {r.runs.map((run, i) => (
                     <li key={i} class={run.time === r.best ? 'best' : ''}>
-                      <span>Passage {i + 1}</span>
-                      {run.time === r.best && <span class="badge">MEILLEUR</span>}
-                      <span class="mono">{fmtDuration(run.time)}</span>
+                      <div class="run-main">
+                        <span>Passage {i + 1}</span>
+                        {run.time === r.best && r.runs.length > 1 && <span class="badge">MEILLEUR</span>}
+                        <span class="mono">{fmtDuration(run.time)}</span>
+                      </div>
+                      {run.splits.length > 0 && (
+                        <div class="run-splits mono">
+                          {run.splits.map((sp, j) => <span key={j}>INT{j + 1} {fmtDuration(sp)}</span>)}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -70,6 +82,8 @@ export function Results({ store, session }: { store: Store; session: Session }) 
           )
         })}
       </ol>
+
+      {log && <TapLog store={store} session={session} onClose={() => setLog(false)} />}
 
       <footer class="bottom bar">
         {msg && <p class="toast-msg" style={{ margin: 0 }}>{msg}</p>}

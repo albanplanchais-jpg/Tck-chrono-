@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
-import type { Kind, Session, Tap } from '../core/model'
-import { computeAll, pendingTaps } from '../core/results'
+import { KIND_LABEL, type Session, type Tap } from '../core/model'
+import { computeAll, pendingTaps, stateAt } from '../core/results'
 import { fmtClock, fmtDuration, fmtHM } from '../core/format'
 import type { Store } from '../store/useSession'
 import { useWakeLock } from '../device/wakeLock'
 import { useNow } from '../device/useNow'
 import { tapFeedback } from '../device/feedback'
-import { AssignSheet } from '../components/AssignSheet'
+import { AssignSheet, type Assignment } from '../components/AssignSheet'
+import { TapLog } from '../components/TapLog'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Icon } from '../components/Icon'
 
 interface Toast { name: string; kind: string; t: number; extra?: string; undo: Tap[] }
 
-const KIND = { start: 'DÉPART', finish: 'ARRIVÉE' } as const
 
 export function Timer({ store, session }: { store: Store; session: Session }) {
   useWakeLock()
@@ -21,6 +21,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
   const [confirm, setConfirm] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
   const [pressed, setPressed] = useState(false)
+  const [log, setLog] = useState(false)
   const toastTimer = useRef<number | undefined>(undefined)
 
   const results = useMemo(() => computeAll(session), [session])
@@ -49,17 +50,16 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
     setSheet(true)
   }
 
-  const onAssign = (tap: Tap, athleteId: string, kind: Kind) => {
-    const r = results.find((x) => x.athlete.id === athleteId)!
-    const extra = kind === 'finish' && r.openStart !== undefined ? fmtDuration(tap.t - r.openStart) : undefined
-    flash({ name: r.athlete.name, kind: KIND[kind], t: tap.t, extra, undo: session.taps })
-    store.assign(tap.id, athleteId, kind)
-  }
-
-  const onMass = (tap: Tap) => {
-    const ids = results.filter((r) => r.openStart === undefined).map((r) => r.athlete.id)
-    flash({ name: `${ids.length} athlètes`, kind: 'DÉPART', t: tap.t, undo: session.taps })
-    store.massStart(tap.id, ids)
+  const onAssign = (tap: Tap, items: Assignment[]) => {
+    const before = session.taps
+    const st = stateAt(session, tap)
+    const first = st.find((x) => x.athlete.id === items[0].athleteId)!
+    const k = items[0].kind
+    const label = k === 'split' ? `INTER ${first.openSplits.length + 1}` : KIND_LABEL[k]
+    const extra = items.length === 1 && k !== 'start' && first.openStart !== undefined ? fmtDuration(tap.t - first.openStart) : undefined
+    const name = items.length > 1 ? `${items.length} athlètes` : first.athlete.name
+    flash({ name, kind: items.length > 1 && items.some((i) => i.kind !== k) ? 'GROUPÉ' : label, t: tap.t, extra, undo: before })
+    store.assignMany(tap.id, items)
   }
 
   const passages = results.reduce((n, r) => n + r.runs.length, 0)
@@ -69,6 +69,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
       <header class="timer-head px">
         <span class="label">Séance · {fmtHM(session.createdAt)}</span>
         <span style={{ display: 'flex', gap: 8 }}>
+          <button class="pill outline" onClick={() => setLog(true)}>Journal</button>
           {pending.length > 0 && !sheet && (
             <button class="pill outline" onClick={() => setSheet(true)}>{pending.length} à attribuer</button>
           )}
@@ -76,11 +77,19 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
         </span>
       </header>
 
-      <ul class="live" style={{ margin: '12px 16px 0' }}>
+      <ul class={`live ${running.length > 4 ? 'compact' : ''}`} style={{ margin: '12px 16px 0' }}>
         {running.length === 0 && <li class="none">Personne en course</li>}
         {running.map((r) => (
           <li key={r.athlete.id}>
-            <span class="who"><span class="dot" /><span>{r.athlete.name}</span></span>
+            <span class="who">
+              <span class="dot" />
+              <span class="nm">
+                {r.athlete.name}
+                {r.openSplits.length > 0 && (
+                  <small class="mono">INT{r.openSplits.length} {fmtDuration(r.openSplits[r.openSplits.length - 1])}</small>
+                )}
+              </span>
+            </span>
             <span class="t">{fmtDuration(now - r.openStart!)}</span>
           </li>
         ))}
@@ -113,7 +122,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
           </div>
         ) : (
           <div class="last">
-            {last ? `DERNIER · ${nameOf(last.athleteId)} — ${KIND[last.kind!]} · ${fmtClock(last.t)}` : 'Touchez TAP au départ ou à l\'arrivée'}
+            {last ? `DERNIER · ${nameOf(last.athleteId)} — ${KIND_LABEL[last.kind!]} · ${fmtClock(last.t)}` : 'Touchez TAP au départ ou à l\'arrivée'}
           </div>
         )}
       </div>
@@ -126,17 +135,19 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
         <>
           <div class="scrim" onClick={() => setSheet(false)} />
           <AssignSheet
+            session={session}
             tap={current}
+            mode="new"
             total={pending.length}
-            results={results}
             onCapture={capture}
-            onAssign={(a, k) => onAssign(current, a, k)}
-            onMass={() => onMass(current)}
+            onAssign={(items) => onAssign(current, items)}
             onVoid={() => store.voidTap(current.id)}
-            onLater={() => setSheet(false)}
+            onClose={() => setSheet(false)}
           />
         </>
       )}
+
+      {log && <TapLog store={store} session={session} onClose={() => setLog(false)} />}
 
       {confirm && (
         <ConfirmModal

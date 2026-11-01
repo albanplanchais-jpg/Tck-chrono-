@@ -11,6 +11,7 @@ export function Setup({ store }: { store: Store }) {
   const [list, setList] = useState<Athlete[]>(store.lastGroup)
   const [name, setName] = useState('')
   const [hint, setHint] = useState(isIOS && !standalone)
+  const [splits, setSplits] = useState(store.lastSplits)
 
   const has = (n: string) => list.some((a) => a.name.toLowerCase() === n.trim().toLowerCase())
   const add = (a: Athlete) => !has(a.name) && setList((l) => [...l, a])
@@ -67,7 +68,7 @@ export function Setup({ store }: { store: Store }) {
             <p>Tapez un nom ci-dessus ou touchez un récent pour l'ajouter. Il faut au moins un athlète pour démarrer.</p>
           </div>
         ) : (
-          <ul class="roster">
+          <ul class={`roster ${list.length > 8 ? 'dense' : ''}`}>
             {list.map((a, i) => (
               <li key={a.id}>
                 <span class="idx">{String(i + 1).padStart(2, '0')}</span>
@@ -93,7 +94,17 @@ export function Setup({ store }: { store: Store }) {
       </div>
 
       <footer class="bottom bar">
-        <button class="btn primary" disabled={!list.length} onClick={() => store.start(list)}>Démarrer la séance</button>
+        <div class="opt">
+          <span class="label white">Chrono inter</span>
+          <div class="seg-sm" role="group" aria-label="Nombre de chronos intermédiaires par passage">
+            {[0, 1, 2, 3].map((n) => (
+              <button key={n} class={splits === n ? 'on' : ''} aria-pressed={splits === n} onClick={() => setSplits(n)}>
+                {n === 0 ? 'Non' : n}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button class="btn primary" disabled={!list.length} onClick={() => store.start(list, splits)}>Démarrer la séance</button>
       </footer>
     </div>
   )
