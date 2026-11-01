@@ -14,8 +14,10 @@ Seuls les *taps* sont enregistrés ; tous les temps sont recalculés (`src/core/
 - **Athlètes** : bouton **Lien** pendant la séance → QR code / lien `…/s/CODE`. Sans compte, l'athlète choisit son nom ou s'inscrit (il apparaît alors sur une nouvelle ligne chez le coach) et suit son chrono + le classement en direct.
 - Sans variables Supabase, l'app fonctionne en mode local (pas de compte, pas de lien).
 
+- **Chronométreurs** : *Partager → Chronométreurs* → choisir les droits (DÉPART, INTER, ARRIVÉE) → lien `…/t/…`. La personne entre son nom et ne voit que ses boutons. Chaque téléphone se cale sur l'horloge du serveur (précision affichée, ±20 ms environ) : départ pris sur un téléphone, arrivée sur un autre. Ses taps sont mis en file et renvoyés s'il perd le réseau ; le coach les voit (« par Paul ») et peut les corriger.
+
 ### Mise en place
-1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`.
+1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`, puis `0002_timekeepers.sql`.
 2. Supabase → **Authentication → URL Configuration** : *Site URL* = l'URL Vercel (ex. `https://tck-chrono.vercel.app`), et l'ajouter aux *Redirect URLs*.
 3. Vercel → **Settings → Environment Variables** : `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (clé *anon/publishable*, jamais la *service_role*), puis redéployer.
 

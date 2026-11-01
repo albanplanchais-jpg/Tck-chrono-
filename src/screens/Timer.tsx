@@ -12,13 +12,14 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { Icon } from '../components/Icon'
 import { ShareModal } from '../components/ShareModal'
 import type { SyncState } from '../cloud/sync'
+import { serverNow, toServer } from '../cloud/clock'
 
 interface Toast { text: string; extra?: string; undo: Tap[] }
 
 const SHORT: Record<Kind, string> = { start: 'DÉP', split: 'INT', finish: 'ARR' }
 
 /** Instant exact d'un événement pointeur (contact du doigt). */
-const eventTime = (e: Event) => performance.timeOrigin + e.timeStamp
+const eventTime = (e: Event) => toServer(performance.timeOrigin + e.timeStamp)
 
 const SYNC_LABEL: Record<SyncState, string> = {
   off: '',
@@ -74,7 +75,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
     if (!canDo(r, k)) return
     const before = session.taps
     const tap = pending[0]
-    const t = tap ? tap.t : downAt.current || Date.now()
+    const t = tap ? tap.t : downAt.current || serverNow()
     if (tap) store.assignMany(tap.id, [{ athleteId: r.athlete.id, kind: k }])
     else {
       store.addAssigned(t, r.athlete.id, k)
@@ -110,11 +111,15 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
     <div class="screen timer board">
       <header class="timer-head px">
         <span class="label">
-          Séance · {fmtHM(session.createdAt)}
-          {sync !== 'off' && <span class={`sync ${sync}`} title={SYNC_LABEL[sync]}> ● {SYNC_LABEL[sync]}</span>}
+          {fmtHM(session.createdAt)}
+          {sync !== 'off' && (
+            <span class={`sync ${sync}`} title={SYNC_LABEL[sync]} aria-label={SYNC_LABEL[sync]}>
+              {' '}{sync === 'ok' ? '●' : sync === 'pending' ? '◐' : `○ ${SYNC_LABEL[sync]}`}
+            </span>
+          )}
         </span>
         <span style={{ display: 'flex', gap: 6 }}>
-          {session.code && <button class="pill outline" onClick={() => setShareOpen(true)}>Lien</button>}
+          {session.code && <button class="pill outline" onClick={() => setShareOpen(true)}>Partager</button>}
           <button class="pill outline" onClick={() => setLog(true)}>Journal</button>
           <button class="pill solid" onClick={() => setConfirm(true)}>Terminer</button>
         </span>
@@ -215,7 +220,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
         </button>
       )}
 
-      {shareOpen && session.code && <ShareModal code={session.code} onClose={() => setShareOpen(false)} />}
+      {shareOpen && session.code && <ShareModal code={session.code} sessionId={session.id} splits={splits} onClose={() => setShareOpen(false)} />}
 
       {fixId && (
         <AthleteFix

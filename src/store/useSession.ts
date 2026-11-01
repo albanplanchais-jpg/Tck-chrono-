@@ -63,6 +63,26 @@ export function useSessionStore() {
     })
   }, [])
 
+  /**
+   * Intègre les taps des chronométreurs. Seules les versions nouvelles (updated_at)
+   * sont appliquées : une correction faite par le coach n'est pas écrasée.
+   */
+  const mergeRemote = useCallback((rows: (Tap & { updatedAt: string })[]) => {
+    setSession((s) => {
+      if (!s) return s
+      const seen = s.remoteSeen ?? {}
+      const fresh = rows.filter((r) => seen[r.id] !== r.updatedAt)
+      if (!fresh.length) return s
+      const byId = new Map(s.taps.map((t) => [t.id, t]))
+      const nextSeen = { ...seen }
+      for (const { updatedAt, ...tap } of fresh) {
+        byId.set(tap.id, tap)
+        nextSeen[tap.id] = updatedAt
+      }
+      return { ...s, taps: [...byId.values()], remoteSeen: nextSeen }
+    })
+  }, [])
+
   /** Enregistre directement un passage (bouton d'une ligne sans impulsion en attente). */
   const addAssigned = useCallback(
     (t: number, athleteId: string, kind: Kind) => patchTaps((taps) => [...taps, { id: uid(), t, athleteId, kind }]),
@@ -105,7 +125,7 @@ export function useSessionStore() {
     setSession(undefined)
   }, [session])
 
-  return { ready, session, roster, lastGroup, lastSplits, start, addTap, addAthletes, addAssigned, assignMany, restore, voidTap, end, resume, reset }
+  return { ready, session, roster, lastGroup, lastSplits, start, addTap, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
 }
 
 export type Store = ReturnType<typeof useSessionStore>

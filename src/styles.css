@@ -478,3 +478,26 @@ a.btn { text-decoration: none; color: inherit; }
 .me-runs li.best { color: var(--white); font-weight: 800; }
 .ranking li.me-row:not(.first) .rank-row { box-shadow: inset 4px 0 0 var(--white); background: var(--g1); }
 .ath-screen .ranking .rank-row { cursor: default; }
+
+/* ——— Chronométreurs ——— */
+.rows-head.n1, .rows.n1 li { grid-template-columns: minmax(0, 1fr) 110px 96px; }
+.rows-head.n1, .rows.n1 { --k: 1; }
+.rows.n1 .act { height: 42px; font-size: 14px; }
+.rows.n1.dense .act { height: 30px; font-size: 12px; }
+.rows .none { display: block !important; height: auto !important; padding: 24px 0; color: var(--g4); border: 0; }
+.keeper .timer-head .label { white-space: normal; line-height: 1.4; }
+.by { display: block; font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--g4); letter-spacing: 0; }
+.log-row .nm { display: flex; flex-direction: column; justify-content: center; line-height: 1.15; }
+.fix-row .by { display: inline; }
+.tabs { margin: 2px 0 4px; }
+.tabs button { height: 44px; font-size: 13px; letter-spacing: .06em; }
+.timers { border-top: 1px solid var(--g3); }
+.timers li { display: flex; align-items: center; gap: 8px; min-height: 56px; border-bottom: 1px solid var(--g3); }
+.timers .tm-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.timers .tm-info b { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timers .tm-info small { font-size: 11px; color: var(--g4); }
+.multi-sel button { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px !important; }
+.modal.share .link { align-self: center; height: 40px; font-size: 15px; color: var(--g4); }
+.tap.logo:disabled { opacity: .4; }
+.timer:not(.keeper) .timer-head .label { white-space: nowrap; }
+.timer:not(.keeper) .timer-head .pill { padding: 0 8px; font-size: 12px; }

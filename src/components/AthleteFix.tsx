@@ -90,7 +90,7 @@ export function AthleteFix({ store, session, athleteId, onClose, onDone }: Props
               <li key={tap.id} class={open ? 'open' : ''}>
                 <button class="fix-row" onClick={() => setOpenId(open ? null : tap.id)}>
                   <span class="kd">{label}</span>
-                  <span class="mono clk">{fmtClock(tap.t)}</span>
+                  <span class="mono clk">{fmtClock(tap.t)}{tap.by && <small class="by"> · {tap.by}</small>}</span>
                   <span class="mono dt">{detail}</span>
                   <Icon name={open ? 'up' : 'down'} size={18} />
                 </button>

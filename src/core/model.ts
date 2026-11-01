@@ -12,6 +12,8 @@ export interface Tap {
   athleteId?: string
   kind?: Kind
   voided?: boolean
+  /** Nom du chronométreur qui a pris ce tap (absent = le coach). */
+  by?: string
 }
 
 export interface Session {
@@ -24,6 +26,8 @@ export interface Session {
   splits?: number
   /** Code à 6 caractères du lien athlète (séance synchronisée en ligne). */
   code?: string
+  /** Version déjà intégrée de chaque tap de chronométreur (id → updated_at). */
+  remoteSeen?: Record<string, string>
 }
 
 export const KIND_LABEL: Record<Kind, string> = { start: 'DÉPART', split: 'INTER', finish: 'ARRIVÉE' }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import type { Athlete, Session } from '../core/model'
+import type { Athlete, Session, Tap } from '../core/model'
+import { syncClock } from './clock'
 import { supabase } from './supabase'
 
 export type SyncState = 'off' | 'ok' | 'pending' | 'offline' | 'error'
@@ -9,14 +10,28 @@ export type SyncState = 'off' | 'ok' | 'pending' | 'offline' | 'error'
  * et récupère les athlètes qui ont rejoint par le lien. L'app reste 100 % utilisable
  * hors ligne : tout est renvoyé dès que le réseau revient.
  */
-export function useCloudSync(session: Session | undefined, enabled: boolean, onJoined: (a: Athlete[]) => void): SyncState {
+export interface CloudHandlers {
+  onJoined: (a: Athlete[]) => void
+  onRemoteTaps: (taps: (Tap & { updatedAt: string })[]) => void
+}
+
+export function useCloudSync(session: Session | undefined, enabled: boolean, handlers: CloudHandlers): SyncState {
   const [state, setState] = useState<SyncState>('off')
   const latest = useRef(session)
   const dirty = useRef(false)
   const timer = useRef<number | undefined>(undefined)
   latest.current = session
-  const joinedCb = useRef(onJoined)
-  joinedCb.current = onJoined
+  const cb = useRef(handlers)
+  cb.current = handlers
+
+  // Horloge commune : mesurée à l'ouverture et au retour du réseau.
+  useEffect(() => {
+    if (!enabled) return
+    syncClock()
+    const on = () => syncClock()
+    window.addEventListener('online', on)
+    return () => window.removeEventListener('online', on)
+  }, [enabled])
 
   const push = async () => {
     const s = latest.current
@@ -66,10 +81,26 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, onJ
     const poll = async () => {
       if (!navigator.onLine) return
       const { data } = await supabase!.from('session_joins').select('id,name').eq('session_id', sid).order('created_at')
-      if (!stop && data?.length) joinedCb.current(data.map((j) => ({ id: j.id as string, name: j.name as string })))
+      if (!stop && data?.length) cb.current.onJoined(data.map((j) => ({ id: j.id as string, name: j.name as string })))
+      const { data: remote } = await supabase!
+        .from('remote_taps')
+        .select('id,t,athlete_id,kind,voided,updated_at,session_timers(name)')
+        .eq('session_id', sid)
+      if (!stop && remote?.length)
+        cb.current.onRemoteTaps(
+          remote.map((r: any) => ({
+            id: r.id,
+            t: r.t,
+            athleteId: r.athlete_id,
+            kind: r.kind,
+            voided: r.voided || undefined,
+            by: r.session_timers?.name || 'Chronométreur',
+            updatedAt: r.updated_at
+          }))
+        )
     }
     poll()
-    const i = setInterval(poll, 4000)
+    const i = setInterval(poll, 2000)
     return () => { stop = true; clearInterval(i) }
   }, [active, sid])
 

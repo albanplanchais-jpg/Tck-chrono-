@@ -48,7 +48,10 @@ export function TapLog({ store, session, onClose }: { store: Store; session: Ses
           <li key={tap.id}>
             <button class={`log-row ${grouped ? 'grouped' : ''} ${tap.athleteId ? '' : 'todo'}`} onClick={() => setEditId(tap.id)}>
               <span class="mono clk">{fmtClock(tap.t)}</span>
-              <span class="nm">{tap.athleteId ? names.get(tap.athleteId) : '—'}</span>
+              <span class="nm">
+                {tap.athleteId ? names.get(tap.athleteId) : '—'}
+                {tap.by && <small class="by">par {tap.by}</small>}
+              </span>
               <span class="kd">{label}</span>
               <span class="mono dt">{detail}</span>
             </button>
