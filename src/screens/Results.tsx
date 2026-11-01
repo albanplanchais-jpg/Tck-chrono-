@@ -3,7 +3,7 @@ import type { Session } from '../core/model'
 import { ranking } from '../core/results'
 import { fmtDay, fmtDuration, fmtGap, fmtHM } from '../core/format'
 import type { Store } from '../store/useSession'
-import { shareResults } from '../device/share'
+import { exportXlsx, shareWhatsApp } from '../device/share'
 import { Icon } from '../components/Icon'
 import { TapLog } from '../components/TapLog'
 
@@ -13,11 +13,17 @@ export function Results({ store, session }: { store: Store; session: Session }) 
   const [msg, setMsg] = useState('')
   const [log, setLog] = useState(false)
 
-  const share = async () => {
-    const r = await shareResults(session)
-    if (r === 'shared') return
-    setMsg(r === 'copied' ? 'Résultats copiés dans le presse-papier' : 'Partage impossible sur cet appareil')
-    setTimeout(() => setMsg(''), 2500)
+  const excel = async () => {
+    try {
+      const r = await exportXlsx(session)
+      if (r === 'downloaded') {
+        setMsg('Fichier Excel téléchargé')
+        setTimeout(() => setMsg(''), 2500)
+      }
+    } catch {
+      setMsg('Export impossible sur cet appareil')
+      setTimeout(() => setMsg(''), 2500)
+    }
   }
 
   return (
@@ -87,7 +93,10 @@ export function Results({ store, session }: { store: Store; session: Session }) 
 
       <footer class="bottom bar">
         {msg && <p class="toast-msg" style={{ margin: 0 }}>{msg}</p>}
-        <button class="btn primary" onClick={share}><Icon name="share" size={22} />Partager</button>
+        <div class="export">
+          <button class="btn primary" onClick={() => shareWhatsApp(session)}><Icon name="chat" size={22} />WhatsApp</button>
+          <button class="btn primary" onClick={excel}><Icon name="sheet" size={22} />Excel</button>
+        </div>
         <button class="btn outline" onClick={store.reset}>Nouvelle séance</button>
       </footer>
     </div>

@@ -4,9 +4,9 @@ PWA de chronométrage pour coach (iPhone & Android). Noir et blanc, utilisable d
 
 ## Principe
 1. **Préparer la séance** : saisir les athlètes (les récents sont mémorisés).
-2. **TAP** : le gros bouton capture l'instant exact du contact du doigt.
+2. **TAP** (le logo) : capture l'instant exact du contact du doigt et ouvre le volet d'attribution. Le bouton ne bouge jamais ; une impulsion pendant que le volet est ouvert est mise en attente.
 3. **Attribuer** : choisir qui. Départ / arrivée est déduit automatiquement (arrivée si l'athlète est en course), ou forcé via le sélecteur. Départ groupé possible.
-4. **Terminer** → classement par meilleur temps, détail des passages, partage (texte + CSV).
+4. **Terminer** → classement par meilleur temps, détail des passages, export **Excel (.xlsx)** et envoi **WhatsApp**.
 
 Seuls les *taps* sont enregistrés ; tous les temps sont recalculés (`src/core/results.ts`) → réattribuer ou annuler un tap est sans risque. Sauvegarde locale (IndexedDB) après chaque tap : l'app reprend où elle en était après une fermeture.
 

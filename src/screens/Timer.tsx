@@ -22,9 +22,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
   const [toast, setToast] = useState<Toast | null>(null)
   const [pressed, setPressed] = useState(false)
   const [log, setLog] = useState(false)
-  // Mode groupé : on choisit inter / arrivée, on tape à chaque passage, on attribue ensuite dans l'ordre.
-  // Activé d'office ; le type suit la course (départ → inter → arrivée) sauf choix manuel.
-  const [group, setGroup] = useState(true)
+  // Type des prochains taps : suit la course (départ → inter → arrivée) sauf choix manuel.
   const [manualKind, setManualKind] = useState<Kind | null>(null)
   const splits = session.splits ?? 0
   const toastTimer = useRef<number | undefined>(undefined)
@@ -62,9 +60,10 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
     e.preventDefault()
     const t = performance.timeOrigin + e.timeStamp
     tapFeedback()
-    // Le bouton ne bouge jamais : chaque tap est mis en file, on attribue dans l'ordre.
-    store.addTap(t, group ? groupKind : undefined)
-    if (!group) setSheet(true)
+    // Le bouton ne bouge jamais. Chaque impulsion ouvre le volet ; si le volet est
+    // déjà ouvert, elle est mise en attente et attribuée juste après, dans l'ordre.
+    store.addTap(t, groupKind)
+    setSheet(true)
   }
 
   const onAssign = (tap: Tap, items: Assignment[]) => {
@@ -94,7 +93,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
       </header>
 
       <div class="main">
-        {group && !panel && (
+        {!panel && (
           <div class="group-bar px">
             <span class="label white">{manualKind ? 'Manuel' : 'Auto'}</span>
             <div class={`seg-sm kinds n${groupKinds.length}`} role="group" aria-label="Type des prochains taps">
@@ -145,15 +144,22 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
       </div>
 
       <div class="status">
-        {!panel && pending.length > 0 ? (
-          <button class="confirm assign-batch" onClick={() => setSheet(true)}>
+        {panel && pending.length > 1 ? (
+          <div class="confirm waiting" role="status">
             <span class="txt">
-              <b>{pending.length} passage{pending.length > 1 ? 's' : ''} à attribuer</b>
-              <span class="mono">dernier · {fmtClock(pending[pending.length - 1].t)}</span>
+              <b>{pending.length - 1} impulsion{pending.length > 2 ? 's' : ''} en attente</b>
+              <span class="mono">dernière · {fmtClock(pending[pending.length - 1].t)}</span>
             </span>
-            <span class="go">Attribuer</span>
-          </button>
-        ) : toast ? (
+            <span class="q mono">+{pending.length - 1}</span>
+          </div>
+        ) : !panel && pending.length > 0 ? (
+          <button class="confirm waiting" onClick={() => setSheet(true)}>
+            <span class="txt">
+              <b>{pending.length} impulsion{pending.length > 1 ? 's' : ''} en attente</b>
+              <span class="mono">dernière · {fmtClock(pending[pending.length - 1].t)}</span>
+            </span>
+            <span class="q">Ouvrir</span>
+          </button>        ) : toast ? (
           <div class="confirm" role="status">
             <span class="txt">
               <b>{toast.name} — {toast.kind}</b>
@@ -164,11 +170,9 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
           </div>
         ) : (
           <div class="last">
-            {group
-              ? 'TAPEZ À CHAQUE PASSAGE · ATTRIBUEZ ENSUITE'
-              : last
-                ? `DERNIER · ${nameOf(last.athleteId)} — ${KIND_LABEL[last.kind!]} · ${fmtClock(last.t)}`
-                : "Touchez TAP au départ ou à l'arrivée"}
+            {last
+              ? `DERNIER · ${nameOf(last.athleteId)} — ${KIND_LABEL[last.kind!]} · ${fmtClock(last.t)}`
+              : 'TOUCHEZ LE LOGO AU DÉPART'}
           </div>
         )}
       </div>
@@ -186,21 +190,14 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
             onContextMenu={(e) => e.preventDefault()}
           >
             <img src="/logo.png" alt="" draggable={false} />
-            {group && <small class="tap-kind">{KIND_LABEL[groupKind]}</small>}
+            <small class="tap-kind">{KIND_LABEL[groupKind]}</small>
             {pending.length > 0 && <span class="tap-count">{pending.length}</span>}
           </button>
         </div>
       </div>
 
-      <div class="foot split">
-        <button
-          class={`grp-toggle ${group ? 'on' : ''}`}
-          aria-pressed={group}
-          onClick={() => { setGroup(!group); setManualKind(null) }}
-        >
-          <span class="sw" />Groupé
-        </button>
-        <button class="link" onClick={() => setConfirm(true)}>Terminer</button>
+      <div class="foot">
+        <button class="link" onClick={() => setConfirm(true)}>Terminer la séance</button>
       </div>
 
       {log && <TapLog store={store} session={session} onClose={() => setLog(false)} />}

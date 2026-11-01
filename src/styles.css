@@ -352,3 +352,10 @@ h1 { font-size: 38px; font-weight: 900; letter-spacing: -.02em; line-height: 1.0
 .tap.logo.pressed img { filter: none; opacity: .75; }
 .tap.logo.pressed .tap-kind { background: var(--white); color: var(--black); }
 .seg-sm.kinds { grid-template-columns: repeat(var(--n, 2), 80px); }
+.confirm.waiting { background: var(--black); color: var(--white); border: 2px solid var(--white); text-align: left; animation: pop 160ms var(--ease); }
+.confirm.waiting .q { font-size: 15px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; border-left: 2px solid var(--white); padding-left: 12px; height: 100%; display: flex; align-items: center; }
+.confirm.waiting .q.mono { font-size: 22px; }
+.export { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.export .btn { letter-spacing: .06em; }
+.ranking.dense ~ .bottom { flex-direction: column; }
+.ranking.dense ~ .bottom .btn.outline { height: 48px; }

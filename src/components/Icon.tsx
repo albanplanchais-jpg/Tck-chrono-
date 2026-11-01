@@ -6,7 +6,9 @@ const paths: Record<string, string> = {
   share: 'M12 15V3M7.5 7.5L12 3l4.5 4.5M5 12v8h14v-8',
   down: 'M6 9l6 6 6-6',
   up: 'M6 15l6-6 6 6',
-  user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 20.5c1-3.6 4-5.5 7.5-5.5s6.5 1.9 7.5 5.5'
+  user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 20.5c1-3.6 4-5.5 7.5-5.5s6.5 1.9 7.5 5.5',
+  chat: 'M4 20l1.4-4.2A8 8 0 1112 20a8 8 0 01-3.9-1L4 20z',
+  sheet: 'M5 3h10l4 4v14H5zM8 11h8M8 15h8M8 19h8M12 11v8'
 }
 
 export function Icon({ name, size = 22, stroke = 2.4 }: { name: keyof typeof paths | string; size?: number; stroke?: number }) {
