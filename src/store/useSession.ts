@@ -52,6 +52,12 @@ export function useSessionStore() {
     [patchTaps]
   )
 
+  /** Enregistre directement un passage (bouton d'une ligne sans impulsion en attente). */
+  const addAssigned = useCallback(
+    (t: number, athleteId: string, kind: Kind) => patchTaps((taps) => [...taps, { id: uid(), t, athleteId, kind }]),
+    [patchTaps]
+  )
+
   /**
    * Attribue un tap à un ou plusieurs athlètes (départ / arrivée groupés) :
    * le premier garde le tap, les autres reçoivent un tap au même instant.
@@ -88,7 +94,7 @@ export function useSessionStore() {
     setSession(undefined)
   }, [session])
 
-  return { ready, session, roster, lastGroup, lastSplits, start, addTap, assignMany, restore, voidTap, end, resume, reset }
+  return { ready, session, roster, lastGroup, lastSplits, start, addTap, addAssigned, assignMany, restore, voidTap, end, resume, reset }
 }
 
 export type Store = ReturnType<typeof useSessionStore>
