@@ -7,6 +7,7 @@ import { useWakeLock } from '../device/wakeLock'
 import { useNow } from '../device/useNow'
 import { tapFeedback } from '../device/feedback'
 import { TapLog } from '../components/TapLog'
+import { AthleteFix } from '../components/AthleteFix'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Icon } from '../components/Icon'
 
@@ -24,6 +25,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
   const [toast, setToast] = useState<Toast | null>(null)
   const [pressed, setPressed] = useState(false)
   const [log, setLog] = useState(false)
+  const [fixId, setFixId] = useState<string | null>(null)
   const toastTimer = useRef<number | undefined>(undefined)
   const downAt = useRef(0)
 
@@ -117,7 +119,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
             <Icon name="check" />
           </div>
         ) : (
-          <div class="last">TOUCHEZ LE LOGO, PUIS LE BOUTON DE L'ATHLÈTE</div>
+          <div class="last">LOGO, PUIS BOUTON DE L'ATHLÈTE · NOM = CORRIGER</div>
         )}
       </div>
 
@@ -134,10 +136,10 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
           const lastRun = r.runs[r.runs.length - 1]
           return (
             <li key={r.athlete.id} class={run ? 'running' : ''}>
-              <span class="nm">
+              <button class="nm" onClick={() => setFixId(r.athlete.id)} aria-label={`Corriger ${r.athlete.name}`}>
                 {run && <span class="dot" />}
                 <span class="n">{r.athlete.name}</span>
-              </span>
+              </button>
               <span class="tm mono">
                 {run ? fmtDuration(now - r.openStart!) : lastRun ? fmtDuration(lastRun.time) : '—'}
                 {run && r.openSplits.length > 0 && (
@@ -179,6 +181,16 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
           </button>
         </div>
       </div>
+
+      {fixId && (
+        <AthleteFix
+          store={store}
+          session={session}
+          athleteId={fixId}
+          onClose={() => setFixId(null)}
+          onDone={(text, undo) => flash({ text, undo })}
+        />
+      )}
 
       {log && <TapLog store={store} session={session} onClose={() => setLog(false)} />}
 
