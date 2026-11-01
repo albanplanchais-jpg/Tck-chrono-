@@ -22,6 +22,8 @@ export interface Session {
   taps: Tap[]
   /** Nombre de chronos intermédiaires attendus par passage (0 = aucun). */
   splits?: number
+  /** Code à 6 caractères du lien athlète (séance synchronisée en ligne). */
+  code?: string
 }
 
 export const KIND_LABEL: Record<Kind, string> = { start: 'DÉPART', split: 'INTER', finish: 'ARRIVÉE' }

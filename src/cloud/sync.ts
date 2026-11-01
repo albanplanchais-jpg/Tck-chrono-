@@ -1,0 +1,77 @@
+import { useEffect, useRef, useState } from 'preact/hooks'
+import type { Athlete, Session } from '../core/model'
+import { supabase } from './supabase'
+
+export type SyncState = 'off' | 'ok' | 'pending' | 'offline' | 'error'
+
+/**
+ * Envoie la séance du coach vers Supabase (après chaque modification, regroupé)
+ * et récupère les athlètes qui ont rejoint par le lien. L'app reste 100 % utilisable
+ * hors ligne : tout est renvoyé dès que le réseau revient.
+ */
+export function useCloudSync(session: Session | undefined, enabled: boolean, onJoined: (a: Athlete[]) => void): SyncState {
+  const [state, setState] = useState<SyncState>('off')
+  const latest = useRef(session)
+  const dirty = useRef(false)
+  const timer = useRef<number | undefined>(undefined)
+  latest.current = session
+  const joinedCb = useRef(onJoined)
+  joinedCb.current = onJoined
+
+  const push = async () => {
+    const s = latest.current
+    if (!supabase || !s?.code || !dirty.current) return
+    if (!navigator.onLine) return setState('offline')
+    dirty.current = false
+    const { error } = await supabase.from('sessions').upsert({
+      id: s.id,
+      code: s.code,
+      created_at: new Date(s.createdAt).toISOString(),
+      ended_at: s.endedAt ? new Date(s.endedAt).toISOString() : null,
+      splits: s.splits ?? 0,
+      athletes: s.athletes,
+      taps: s.taps,
+      updated_at: new Date().toISOString()
+    })
+    if (error) {
+      dirty.current = true
+      setState(navigator.onLine ? 'error' : 'offline')
+    } else if (!dirty.current) setState('ok')
+  }
+
+  // Chaque modification → envoi groupé 500 ms plus tard.
+  useEffect(() => {
+    if (!enabled || !session?.code) return setState('off')
+    dirty.current = true
+    setState(navigator.onLine ? 'pending' : 'offline')
+    clearTimeout(timer.current)
+    timer.current = window.setTimeout(push, 500)
+  }, [session, enabled])
+
+  // Nouvel essai quand le réseau revient, et toutes les 10 s en cas d'échec.
+  useEffect(() => {
+    if (!enabled) return
+    const retry = () => dirty.current && push()
+    window.addEventListener('online', retry)
+    const i = setInterval(retry, 10000)
+    return () => { window.removeEventListener('online', retry); clearInterval(i) }
+  }, [enabled])
+
+  // Athlètes inscrits par le lien (séance en cours uniquement).
+  const sid = session?.id
+  const active = enabled && !!session?.code && !session?.endedAt
+  useEffect(() => {
+    if (!active || !supabase || !sid) return
+    let stop = false
+    const poll = async () => {
+      if (!navigator.onLine) return
+      const { data } = await supabase!.from('session_joins').select('id,name').eq('session_id', sid).order('created_at')
+      if (!stop && data?.length) joinedCb.current(data.map((j) => ({ id: j.id as string, name: j.name as string })))
+    }
+    poll()
+    const i = setInterval(poll, 4000)
+    return () => { stop = true; clearInterval(i) }
+  }, [active, sid])
+
+  return state
+}

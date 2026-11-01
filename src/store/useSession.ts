@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { uid, type Athlete, type Kind, type Session, type Tap } from '../core/model'
 import { get, set } from 'idb-keyval'
+import { cloudEnabled, newCode } from '../cloud/supabase'
 import { archive, loadRoster, loadSession, saveRoster, saveSession } from './db'
 
 export function useSessionStore() {
@@ -38,7 +39,7 @@ export function useSessionStore() {
       const next = [...athletes, ...roster.filter((a) => !athletes.some((x) => x.name.toLowerCase() === a.name.toLowerCase()))].slice(0, 60)
       setRoster(next)
       saveRoster(next)
-      setSession({ id: uid(), createdAt: Date.now(), athletes, taps: [], splits })
+      setSession({ id: uid(), createdAt: Date.now(), athletes, taps: [], splits, ...(cloudEnabled ? { code: newCode() } : {}) })
     },
     [roster]
   )
@@ -51,6 +52,16 @@ export function useSessionStore() {
     },
     [patchTaps]
   )
+
+  /** Athlète qui a rejoint la séance par le lien (ignoré si le nom existe déjà). */
+  const addAthletes = useCallback((list: Athlete[]) => {
+    setSession((s) => {
+      if (!s) return s
+      const known = new Set(s.athletes.map((a) => a.name.toLowerCase()))
+      const fresh = list.filter((a) => !known.has(a.name.toLowerCase()))
+      return fresh.length ? { ...s, athletes: [...s.athletes, ...fresh] } : s
+    })
+  }, [])
 
   /** Enregistre directement un passage (bouton d'une ligne sans impulsion en attente). */
   const addAssigned = useCallback(
@@ -94,7 +105,7 @@ export function useSessionStore() {
     setSession(undefined)
   }, [session])
 
-  return { ready, session, roster, lastGroup, lastSplits, start, addTap, addAssigned, assignMany, restore, voidTap, end, resume, reset }
+  return { ready, session, roster, lastGroup, lastSplits, start, addTap, addAthletes, addAssigned, assignMany, restore, voidTap, end, resume, reset }
 }
 
 export type Store = ReturnType<typeof useSessionStore>

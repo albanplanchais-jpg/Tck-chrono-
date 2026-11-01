@@ -9,6 +9,18 @@ PWA de chronométrage pour coach (iPhone & Android). Noir et blanc, utilisable d
 
 Seuls les *taps* sont enregistrés ; tous les temps sont recalculés (`src/core/results.ts`) → réattribuer ou annuler un tap est sans risque. Sauvegarde locale (IndexedDB) après chaque tap : l'app reprend où elle en était après une fermeture.
 
+## Comptes coach et lien athlètes (Supabase)
+- **Coach** : compte e-mail + mot de passe obligatoire pour créer une séance. La séance est synchronisée vers Supabase après chaque modification (l'app reste utilisable hors ligne et renvoie tout dès que le réseau revient).
+- **Athlètes** : bouton **Lien** pendant la séance → QR code / lien `…/s/CODE`. Sans compte, l'athlète choisit son nom ou s'inscrit (il apparaît alors sur une nouvelle ligne chez le coach) et suit son chrono + le classement en direct.
+- Sans variables Supabase, l'app fonctionne en mode local (pas de compte, pas de lien).
+
+### Mise en place
+1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`.
+2. Supabase → **Authentication → URL Configuration** : *Site URL* = l'URL Vercel (ex. `https://tck-chrono.vercel.app`), et l'ajouter aux *Redirect URLs*.
+3. Vercel → **Settings → Environment Variables** : `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (clé *anon/publishable*, jamais la *service_role*), puis redéployer.
+
+Le serveur MCP Supabase est déclaré dans `.mcp.json` (à authentifier avec `claude /mcp`).
+
 ## Développement
 ```bash
 npm install

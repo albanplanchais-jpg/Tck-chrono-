@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'preact/hooks'
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { KIND_LABEL, type Kind, type Session, type Tap } from '../core/model'
 import { autoKind, computeAll, pendingTaps, type AthleteResult } from '../core/results'
 import { fmtClock, fmtDuration, fmtHM } from '../core/format'
@@ -10,6 +10,8 @@ import { TapLog } from '../components/TapLog'
 import { AthleteFix } from '../components/AthleteFix'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Icon } from '../components/Icon'
+import { ShareModal } from '../components/ShareModal'
+import type { SyncState } from '../cloud/sync'
 
 interface Toast { text: string; extra?: string; undo: Tap[] }
 
@@ -18,7 +20,15 @@ const SHORT: Record<Kind, string> = { start: 'DÉP', split: 'INT', finish: 'ARR'
 /** Instant exact d'un événement pointeur (contact du doigt). */
 const eventTime = (e: Event) => performance.timeOrigin + e.timeStamp
 
-export function Timer({ store, session }: { store: Store; session: Session }) {
+const SYNC_LABEL: Record<SyncState, string> = {
+  off: '',
+  ok: 'En ligne',
+  pending: 'Envoi…',
+  offline: 'Hors ligne',
+  error: 'Erreur de synchro'
+}
+
+export function Timer({ store, session, sync = 'off' }: { store: Store; session: Session; sync?: SyncState }) {
   useWakeLock()
   const now = useNow()
   const [confirm, setConfirm] = useState(false)
@@ -26,6 +36,7 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
   const [pressed, setPressed] = useState(false)
   const [log, setLog] = useState(false)
   const [fixId, setFixId] = useState<string | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
   const toastTimer = useRef<number | undefined>(undefined)
   const downAt = useRef(0)
 
@@ -82,13 +93,28 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
     flash({ text: `${idle.length} athlètes — DÉPART`, extra: fmtClock(tap.t), undo: before })
   }
 
+  // Annonce des athlètes qui viennent de rejoindre par le lien.
+  const seen = useRef(session.athletes.length)
+  useEffect(() => {
+    const n = session.athletes.length
+    if (n > seen.current) {
+      const fresh = session.athletes.slice(seen.current).map((a) => a.name)
+      flash({ text: `${fresh.join(', ')} ${fresh.length > 1 ? 'ont' : 'a'} rejoint`, extra: 'via le lien', undo: session.taps })
+    }
+    seen.current = n
+  }, [session.athletes.length])
+
   const passages = results.reduce((n, r) => n + r.runs.length, 0)
 
   return (
     <div class="screen timer board">
       <header class="timer-head px">
-        <span class="label">Séance · {fmtHM(session.createdAt)}</span>
-        <span style={{ display: 'flex', gap: 8 }}>
+        <span class="label">
+          Séance · {fmtHM(session.createdAt)}
+          {sync !== 'off' && <span class={`sync ${sync}`} title={SYNC_LABEL[sync]}> ● {SYNC_LABEL[sync]}</span>}
+        </span>
+        <span style={{ display: 'flex', gap: 6 }}>
+          {session.code && <button class="pill outline" onClick={() => setShareOpen(true)}>Lien</button>}
           <button class="pill outline" onClick={() => setLog(true)}>Journal</button>
           <button class="pill solid" onClick={() => setConfirm(true)}>Terminer</button>
         </span>
@@ -181,6 +207,15 @@ export function Timer({ store, session }: { store: Store; session: Session }) {
           </button>
         </div>
       </div>
+
+      {results.length === 0 && session.code && (
+        <button class="empty-join" onClick={() => setShareOpen(true)}>
+          <b>Aucun athlète pour l'instant</b>
+          <span>Touchez ici pour afficher le QR code : les athlètes s'inscrivent et apparaissent automatiquement.</span>
+        </button>
+      )}
+
+      {shareOpen && session.code && <ShareModal code={session.code} onClose={() => setShareOpen(false)} />}
 
       {fixId && (
         <AthleteFix

@@ -426,3 +426,55 @@ h1 { font-size: 38px; font-weight: 900; letter-spacing: -.02em; line-height: 1.0
 .fix-edit .chips { padding: 0; gap: 6px; }
 .fix-edit .chip { height: 40px; padding: 0 14px; font-size: 15px; }
 .fix-edit .btn.outline { height: 46px; font-size: 15px; }
+
+/* ——— Compte, connexion, partage, page athlète ——— */
+.account { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: #ccc; }
+.account .link { height: 36px; padding: 0; font-size: 14px; color: var(--g4); }
+.login-head { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px 0 18px; }
+.login-head img { margin: 0 0 10px -8px; }
+.login-head p { margin: 4px 0 0; font-size: 15px; line-height: 1.45; }
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+.login-form label { display: flex; flex-direction: column; gap: 6px; }
+.login-form input, .join input {
+  height: 58px; border: 2px solid var(--white); border-radius: 0; background: var(--black); color: var(--white);
+  font: 600 18px var(--font); padding: 0 16px; outline: none; width: 100%;
+}
+.form-msg { margin: 0; font-size: 14px; line-height: 1.45; color: #ddd; border-left: 3px solid var(--white); padding-left: 10px; }
+.form-msg.err { font-weight: 700; color: var(--white); }
+.login-alt { display: flex; flex-direction: column; align-items: center; padding: 14px 0 30px; }
+.login-alt .link { height: 44px; font-size: 15px; }
+.sync { font-family: var(--mono); letter-spacing: .02em; text-transform: none; }
+.sync.ok { color: var(--white); }
+.sync.error { color: var(--white); text-decoration: underline; }
+.empty-join { position: absolute; left: var(--pad); right: var(--pad); top: 210px; border: 2px dashed var(--g4); padding: 18px; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+.empty-join b { font-size: 18px; }
+.empty-join span { font-size: 14px; color: var(--g4); line-height: 1.45; }
+.modal.share { gap: 12px; max-height: calc(100vh - 40px); overflow-y: auto; }
+.modal.share p { margin: 0; color: #ccc; font-size: 15px; line-height: 1.45; }
+.share-head { display: flex; justify-content: space-between; align-items: center; }
+.share-head h2 { margin: 0; }
+.qr { background: var(--white); padding: 10px; width: min(240px, 60vw); align-self: center; }
+.qr svg { display: block; width: 100%; height: auto; }
+.share-code { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--g3); border-bottom: 1px solid var(--g3); padding: 10px 0; }
+.share-code .mono { font-size: 26px; font-weight: 800; letter-spacing: .18em; }
+a.btn { text-decoration: none; color: inherit; }
+.modal-wrap { z-index: 20; }
+
+.ath-screen .center-msg { margin: auto 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-bottom: 60px; }
+.ath-screen .center-msg h1 { font-size: 32px; }
+.ath-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 2px solid var(--white); }
+.ath-head h1 { font-size: 24px; }
+.ath-q { font-size: 30px; font-weight: 900; margin: 22px 0 14px; }
+.join { display: flex; flex-direction: column; gap: 8px; margin-top: 22px; padding-bottom: 30px; }
+.join .field { margin-top: 0; }
+.me { padding-top: 18px; padding-bottom: 18px; border-bottom: 2px solid var(--white); }
+.me-top { display: flex; justify-content: space-between; align-items: baseline; }
+.me-top h2 { font-size: 34px; font-weight: 900; margin: 0 0 8px; }
+.me-top .link { height: 36px; padding: 0; font-size: 14px; color: var(--g4); }
+.me-time { font-size: clamp(52px, 17vw, 76px); font-weight: 800; letter-spacing: -.04em; line-height: 1.05; margin: 4px 0; }
+.me-sub { font-size: 14px; font-weight: 700; color: #ccc; margin-top: 4px; }
+.me-runs { margin-top: 12px; border-top: 1px solid var(--g3); }
+.me-runs li { display: flex; justify-content: space-between; height: 40px; align-items: center; border-bottom: 1px solid var(--g2); color: var(--g4); }
+.me-runs li.best { color: var(--white); font-weight: 800; }
+.ranking li.me-row:not(.first) .rank-row { box-shadow: inset 4px 0 0 var(--white); background: var(--g1); }
+.ath-screen .ranking .rank-row { cursor: default; }

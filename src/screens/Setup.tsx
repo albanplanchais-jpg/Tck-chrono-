@@ -3,11 +3,14 @@ import { uid, type Athlete } from '../core/model'
 import { fmtDay } from '../core/format'
 import type { Store } from '../store/useSession'
 import { Icon } from '../components/Icon'
+import type { User } from '@supabase/supabase-js'
+import { cloudEnabled } from '../cloud/supabase'
+import { signOut } from '../cloud/auth'
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
 
-export function Setup({ store }: { store: Store }) {
+export function Setup({ store, user }: { store: Store; user?: User | null }) {
   const [list, setList] = useState<Athlete[]>(store.lastGroup)
   const [name, setName] = useState('')
   const [hint, setHint] = useState(isIOS && !standalone)
@@ -35,6 +38,13 @@ export function Setup({ store }: { store: Store }) {
           </div>
           <img src="/logo.png" alt="Torcy Canoë-Kayak" width={72} height={72} />
         </header>
+
+        {user && (
+          <div class="account">
+            <span>Coach · <b>{(user.user_metadata?.name as string) || user.email}</b></span>
+            <button class="link" onClick={signOut}>Déconnexion</button>
+          </div>
+        )}
 
         {hint && (
           <div class="banner">
@@ -68,7 +78,11 @@ export function Setup({ store }: { store: Store }) {
           <div class="empty-state">
             <div class="ico"><Icon name="user" size={24} stroke={1.8} /></div>
             <h3>Aucun athlète</h3>
-            <p>Tapez un nom ci-dessus ou touchez un récent pour l'ajouter. Il faut au moins un athlète pour démarrer.</p>
+            <p>
+              {cloudEnabled
+                ? "Ajoute des noms ici, ou démarre et partage le lien : les athlètes s'inscrivent eux-mêmes."
+                : "Tapez un nom ci-dessus ou touchez un récent pour l'ajouter. Il faut au moins un athlète pour démarrer."}
+            </p>
           </div>
         ) : (
           <ul class={`roster ${list.length > 8 ? 'dense' : ''}`}>
@@ -107,7 +121,7 @@ export function Setup({ store }: { store: Store }) {
             ))}
           </div>
         </div>
-        <button class="btn primary" disabled={!list.length} onClick={() => store.start(list, splits)}>Démarrer la séance</button>
+        <button class="btn primary" disabled={!list.length && !cloudEnabled} onClick={() => store.start(list, splits)}>Démarrer la séance</button>
       </footer>
     </div>
   )
