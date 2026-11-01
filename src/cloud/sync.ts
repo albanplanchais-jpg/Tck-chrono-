@@ -80,8 +80,12 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
     let stop = false
     const poll = async () => {
       if (!navigator.onLine) return
-      const { data } = await supabase!.from('session_joins').select('id,name').eq('session_id', sid).order('created_at')
-      if (!stop && data?.length) cb.current.onJoined(data.map((j) => ({ id: j.id as string, name: j.name as string })))
+      // Repli si la migration 0003 (colonne bib) n'est pas encore passée.
+      let { data, error } = await supabase!.from('session_joins').select('id,name,bib').eq('session_id', sid).order('created_at')
+      if (error) ({ data } = await supabase!.from('session_joins').select('id,name').eq('session_id', sid).order('created_at') as any)
+      if (!stop && data?.length) cb.current.onJoined(
+          data.map((j) => ({ id: j.id as string, name: j.name as string, ...(typeof j.bib === 'number' ? { bib: j.bib } : {}) }))
+        )
       const { data: remote } = await supabase!
         .from('remote_taps')
         .select('id,t,athlete_id,kind,voided,updated_at,session_timers(name)')

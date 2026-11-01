@@ -3,7 +3,7 @@
 PWA de chronométrage pour coach (iPhone & Android). Noir et blanc, utilisable d'une main, fonctionne **sans réseau**.
 
 ## Principe
-1. **Préparer la séance** : saisir les athlètes (les récents sont mémorisés).
+1. **Préparer la séance** : nom + dossard de chaque athlète (les récents sont mémorisés), ordre de départ du premier au dernier (▲▼ ou « Trier par n° »), et vagues (« Part avec… » : ils partent ensemble, un seul DÉP pour toute la vague). L'ordre se modifie aussi pendant la séance (« Ordre ✎ »).
 2. **Séance** : une ligne par athlète avec ses boutons DÉP / INT / ARR. Une impulsion sur le logo (fixe, en bas) capture l'instant exact ; on touche ensuite le bouton de la ligne. Plusieurs impulsions s'attribuent dans l'ordre. Sans impulsion en attente, toucher un bouton enregistre l'instant du toucher. « Tous partent » pour un départ groupé.
 4. **Terminer** → classement par meilleur temps, détail des passages, export **Excel (.xlsx)** et envoi **WhatsApp**.
 
@@ -17,7 +17,7 @@ Seuls les *taps* sont enregistrés ; tous les temps sont recalculés (`src/core/
 - **Chronométreurs** : *Partager → Chronométreurs* → choisir les droits (DÉPART, INTER, ARRIVÉE) → lien `…/t/…`. La personne entre son nom et ne voit que ses boutons. Chaque téléphone se cale sur l'horloge du serveur (précision affichée, ±20 ms environ) : départ pris sur un téléphone, arrivée sur un autre. Ses taps sont mis en file et renvoyés s'il perd le réseau ; le coach les voit (« par Paul ») et peut les corriger.
 
 ### Mise en place
-1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`, puis `0002_timekeepers.sql`.
+1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`, puis `0002_timekeepers.sql`, puis `0003_bibs.sql` (dans l'ordre).
 2. Supabase → **Authentication → URL Configuration** : *Site URL* = l'URL Vercel (ex. `https://tck-chrono.vercel.app`), et l'ajouter aux *Redirect URLs*.
 3. Vercel → **Settings → Environment Variables** : `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (clé *anon/publishable*, jamais la *service_role*), puis redéployer.
 

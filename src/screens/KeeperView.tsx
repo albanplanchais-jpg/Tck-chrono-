@@ -8,6 +8,7 @@ import { useNow } from '../device/useNow'
 import { useWakeLock } from '../device/wakeLock'
 import { tapFeedback } from '../device/feedback'
 import { Icon } from '../components/Icon'
+import { waveOf } from '../core/startOrder'
 
 interface Row {
   code: string; created_at: string; ended_at: string | null; splits: number
@@ -133,10 +134,15 @@ export function KeeperView({ token }: { token: string }) {
     const t = pending[0] ?? (downAt.current || serverNow())
     if (pending.length) setPending((p) => p.slice(1))
     else tapFeedback()
-    const tap: Tap = { id: uid(), t, athleteId: r.athlete.id, kind: k, by: name }
-    add([tap])
+    // Départ : toute la vague part ensemble.
+    const mates =
+      k === 'start' && session
+        ? waveOf(session.athletes, r.athlete.id).map((a) => results.find((x) => x.athlete.id === a.id)!).filter((x) => x && canDo(x, 'start'))
+        : [r]
+    const taps: Tap[] = mates.map((x) => ({ id: uid(), t, athleteId: x.athlete.id, kind: k, by: name }))
+    add(taps)
     const label = k === 'split' ? `INTER ${r.openSplits.length + 1}` : KIND_LABEL[k]
-    flash(`${r.athlete.name} — ${label}`, k !== 'start' && r.openStart !== undefined ? fmtDuration(t - r.openStart) : fmtClock(t), tap.id)
+    flash(`${mates.map((x) => x.athlete.name).join(' + ')} — ${label}`, k !== 'start' && r.openStart !== undefined ? fmtDuration(t - r.openStart) : fmtClock(t), taps.map((x) => x.id).join(','))
   }
 
   const massStart = () => {
@@ -254,8 +260,12 @@ export function KeeperView({ token }: { token: string }) {
           const next = autoKind(a, splits)
           const lastRun = a.runs[a.runs.length - 1]
           return (
-            <li key={a.athlete.id} class={run ? 'running' : ''}>
-              <span class="nm">{run && <span class="dot" />}<span class="n">{a.athlete.name}</span></span>
+            <li key={a.athlete.id} class={`${run ? 'running' : ''} ${a.athlete.withPrev ? 'with-prev' : ''}`}>
+              <span class="nm">
+                {run && <span class="dot" />}
+                {a.athlete.bib !== undefined && <span class="bibn mono">{a.athlete.bib}</span>}
+                <span class="n">{a.athlete.name}</span>
+              </span>
               <span class="tm mono">
                 {run ? fmtDuration(now - a.openStart!) : lastRun ? fmtDuration(lastRun.time) : '—'}
                 {!run && a.runs.length > 0 && <small>arrivé</small>}

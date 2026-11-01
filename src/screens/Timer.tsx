@@ -8,6 +8,8 @@ import { useNow } from '../device/useNow'
 import { tapFeedback } from '../device/feedback'
 import { TapLog } from '../components/TapLog'
 import { AthleteFix } from '../components/AthleteFix'
+import { StartOrder } from '../components/StartOrder'
+import { waveOf, waves } from '../core/startOrder'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Icon } from '../components/Icon'
 import { ShareModal } from '../components/ShareModal'
@@ -38,6 +40,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
   const [log, setLog] = useState(false)
   const [fixId, setFixId] = useState<string | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
+  const [orderOpen, setOrderOpen] = useState(false)
   const toastTimer = useRef<number | undefined>(undefined)
   const downAt = useRef(0)
 
@@ -76,14 +79,22 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
     const before = session.taps
     const tap = pending[0]
     const t = tap ? tap.t : downAt.current || serverNow()
-    if (tap) store.assignMany(tap.id, [{ athleteId: r.athlete.id, kind: k }])
+    // Départ : toute la vague de l'athlète (ceux qui ne sont pas déjà partis) part avec lui.
+    const mates =
+      k === 'start'
+        ? waveOf(session.athletes, r.athlete.id)
+            .map((a) => results.find((x) => x.athlete.id === a.id)!)
+            .filter((x) => x && canDo(x, 'start'))
+        : [r]
+    const items = mates.map((x) => ({ athleteId: x.athlete.id, kind: k }))
+    if (tap) store.assignMany(tap.id, items)
     else {
-      store.addAssigned(t, r.athlete.id, k)
+      items.forEach((it) => store.addAssigned(t, it.athleteId, k))
       tapFeedback()
     }
     const label = k === 'split' ? `INTER ${r.openSplits.length + 1}` : KIND_LABEL[k]
     const extra = k !== 'start' && r.openStart !== undefined ? fmtDuration(t - r.openStart) : fmtClock(t)
-    flash({ text: `${r.athlete.name} — ${label}`, extra, undo: before })
+    flash({ text: `${mates.map((x) => x.athlete.name).join(' + ')} — ${label}`, extra, undo: before })
   }
 
   const massStart = () => {
@@ -104,6 +115,13 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
     }
     seen.current = n
   }, [session.athletes.length])
+
+  // Vagues de départ : la prochaine vague (personne n'est encore parti) est signalée.
+  const touched = useMemo(() => new Set(session.taps.filter((t) => !t.voided && t.athleteId).map((t) => t.athleteId!)), [session.taps])
+  const nextWave = useMemo(
+    () => new Set((waves(session.athletes).find((w) => w.every((a) => !touched.has(a.id))) ?? []).map((a) => a.id)),
+    [session.athletes, touched]
+  )
 
   const passages = results.reduce((n, r) => n + r.runs.length, 0)
 
@@ -155,7 +173,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
       </div>
 
       <div class={`rows-head px n${kinds.length}`}>
-        <span class="label">Athlète{running.length ? ` · ${running.length} ●` : ''}</span>
+        <button class="label order-btn" onClick={() => setOrderOpen(true)}>Ordre ✎{running.length ? ` · ${running.length} ●` : ''}</button>
         <span class="label">Temps</span>
         {kinds.map((k) => <span key={k} class="label c">{SHORT[k]}</span>)}
       </div>
@@ -166,9 +184,11 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
           const next = autoKind(r, splits)
           const lastRun = r.runs[r.runs.length - 1]
           return (
-            <li key={r.athlete.id} class={run ? 'running' : ''}>
+            <li key={r.athlete.id} class={`${run ? 'running' : ''} ${r.athlete.withPrev ? 'with-prev' : ''} ${nextWave.has(r.athlete.id) ? 'next-wave' : ''}`}>
               <button class="nm" onClick={() => setFixId(r.athlete.id)} aria-label={`Corriger ${r.athlete.name}`}>
                 {run && <span class="dot" />}
+                {nextWave.has(r.athlete.id) && !run && <span class="next-mark" aria-label="Prochain départ">▸</span>}
+                {r.athlete.bib !== undefined && <span class="bibn mono">{r.athlete.bib}</span>}
                 <span class="n">{r.athlete.name}</span>
               </button>
               <span class="tm mono">
@@ -221,6 +241,22 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
       )}
 
       {shareOpen && session.code && <ShareModal code={session.code} sessionId={session.id} splits={splits} onClose={() => setShareOpen(false)} />}
+
+      {orderOpen && (
+        <div class="layer">
+          <header class="px layer-head">
+            <div>
+              <span class="label">Dossards · vagues</span>
+              <h2>Ordre de départ</h2>
+            </div>
+            <button class="rm" onClick={() => setOrderOpen(false)} aria-label="Fermer"><Icon name="x" size={26} /></button>
+          </header>
+          <p class="px layer-hint">Du premier au dernier à partir. « Part avec… » : ils partent ensemble, un seul DÉP pour la vague.</p>
+          <div class="scroll px">
+            <StartOrder athletes={session.athletes} onChange={store.setAthletes} started={touched} />
+          </div>
+        </div>
+      )}
 
       {fixId && (
         <AthleteFix

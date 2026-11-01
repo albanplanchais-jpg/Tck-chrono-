@@ -53,13 +53,24 @@ export function useSessionStore() {
     [patchTaps]
   )
 
+  /** Nouvel ordre de départ / dossards pendant la séance. */
+  const setAthletes = useCallback((athletes: Athlete[]) => setSession((s) => (s ? { ...s, athletes } : s)), [])
+
   /** Athlète qui a rejoint la séance par le lien (ignoré si le nom existe déjà). */
   const addAthletes = useCallback((list: Athlete[]) => {
     setSession((s) => {
       if (!s) return s
+      const byName = new Map(list.map((a) => [a.name.toLowerCase(), a]))
       const known = new Set(s.athletes.map((a) => a.name.toLowerCase()))
       const fresh = list.filter((a) => !known.has(a.name.toLowerCase()))
-      return fresh.length ? { ...s, athletes: [...s.athletes, ...fresh] } : s
+      // Dossard donné par l'athlète : complète un athlète déjà inscrit par le coach sans dossard.
+      let changed = false
+      const athletes = s.athletes.map((a) => {
+        const j = byName.get(a.name.toLowerCase())
+        if (j?.bib !== undefined && a.bib === undefined) { changed = true; return { ...a, bib: j.bib } }
+        return a
+      })
+      return fresh.length || changed ? { ...s, athletes: [...athletes, ...fresh] } : s
     })
   }, [])
 
@@ -125,7 +136,7 @@ export function useSessionStore() {
     setSession(undefined)
   }, [session])
 
-  return { ready, session, roster, lastGroup, lastSplits, start, addTap, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
+  return { ready, session, roster, lastGroup, lastSplits, start, addTap, setAthletes, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
 }
 
 export type Store = ReturnType<typeof useSessionStore>

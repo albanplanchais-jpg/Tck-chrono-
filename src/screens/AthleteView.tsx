@@ -4,6 +4,7 @@ import { computeAll, ranking } from '../core/results'
 import { fmtDay, fmtDuration, fmtGap, fmtHM } from '../core/format'
 import { supabase, frError } from '../cloud/supabase'
 import { useNow } from '../device/useNow'
+import { label, parseBib } from '../core/startOrder'
 
 interface Row { code: string; created_at: string; ended_at: string | null; splits: number; athletes: Session['athletes']; taps: Session['taps']; updated_at: string }
 
@@ -20,6 +21,7 @@ export function AthleteView({ code }: { code: string }) {
   const [me, setMe] = useState<string | null>(() => loadMe(code))
   const [joining, setJoining] = useState(false)
   const [name, setName] = useState('')
+  const [bib, setBib] = useState('')
   const [error, setError] = useState('')
   const [lastSeen, setLastSeen] = useState(0)
 
@@ -69,7 +71,11 @@ export function AthleteView({ code }: { code: string }) {
     if (!n) return
     setError('')
     setJoining(true)
-    const { error } = await supabase!.rpc('join_session', { p_code: code, p_name: n })
+    const b = parseBib(bib)
+    let { error } = await supabase!.rpc('join_session', { p_code: code, p_name: n, p_bib: b ?? null })
+    // Repli si la migration 0003 n'est pas encore passée (ancienne fonction sans dossard).
+    if (error && /PGRST202|Could not find the function/i.test(`${error.code} ${error.message}`))
+      ({ error } = await supabase!.rpc('join_session', { p_code: code, p_name: n }))
     setJoining(false)
     if (error) return setError(frError(error))
     choose(n)
@@ -107,7 +113,7 @@ export function AthleteView({ code }: { code: string }) {
           <h2 class="ath-q">Qui es-tu ?</h2>
           {s.athletes.length > 0 && (
             <div class="chips">
-              {s.athletes.map((a) => <button key={a.id} class="chip" onClick={() => choose(a.name)}>{a.name}</button>)}
+              {s.athletes.map((a) => <button key={a.id} class="chip" onClick={() => choose(a.name)}>{label(a)}</button>)}
             </div>
           )}
           {live ? (
@@ -115,6 +121,7 @@ export function AthleteView({ code }: { code: string }) {
               <span class="label">{s.athletes.length ? 'Pas dans la liste ? Inscris-toi' : 'Inscris-toi à la séance'}</span>
               <div class="field">
                 <input value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} placeholder="Ton prénom" maxLength={40} autocapitalize="words" required />
+                <input class="bib-in mono" value={bib} onInput={(e) => setBib((e.target as HTMLInputElement).value)} placeholder="Dossard" inputMode="numeric" aria-label="Ton numéro de dossard" />
                 <button class="add" type="submit" disabled={joining} aria-label="Rejoindre">→</button>
               </div>
               {error && <p class="form-msg err" role="alert">{error}</p>}
@@ -136,7 +143,7 @@ export function AthleteView({ code }: { code: string }) {
       <div class="scroll">
         <section class="me px">
           <div class="me-top">
-            <h2>{me}</h2>
+            <h2>{mine?.athlete.bib !== undefined && <span class="bibn mono big">{mine.athlete.bib}</span>}{me}</h2>
             <button class="link" onClick={() => { saveMe(code, null); setMe(null) }}>Pas moi</button>
           </div>
           {!mine ? (
@@ -179,7 +186,7 @@ export function AthleteView({ code }: { code: string }) {
               <li key={r.athlete.id} class={`${r.rank === 1 ? 'first' : ''} ${mine?.athlete.id === r.athlete.id ? 'me-row' : ''}`}>
                 <div class={`rank-row ${r.best === undefined && !running ? 'nt' : ''}`}>
                   <span class="rk">{r.rank ?? '–'}</span>
-                  <span style={{ minWidth: 0 }}><span class="nm">{r.athlete.name}</span></span>
+                  <span style={{ minWidth: 0 }}><span class="nm">{r.athlete.bib !== undefined && <span class="bibn mono">{r.athlete.bib}</span>}{r.athlete.name}</span></span>
                   <span>
                     <span class="tm">{running ? fmtDuration(now - r.openStart!) : r.best !== undefined ? fmtDuration(r.best) : '—'}</span>
                     {running ? <span class="gp">EN COURSE</span> : r.gap !== undefined && <span class="gp">{r.gap === 0 ? 'EN TÊTE' : fmtGap(r.gap)}</span>}

@@ -3,6 +3,8 @@ import { uid, type Athlete } from '../core/model'
 import { fmtDay } from '../core/format'
 import type { Store } from '../store/useSession'
 import { Icon } from '../components/Icon'
+import { StartOrder } from '../components/StartOrder'
+import { label, parseBib } from '../core/startOrder'
 import type { User } from '@supabase/supabase-js'
 import { cloudEnabled } from '../cloud/supabase'
 import { signOut } from '../cloud/auth'
@@ -13,18 +15,21 @@ const standalone = matchMedia('(display-mode: standalone)').matches || (navigato
 export function Setup({ store, user }: { store: Store; user?: User | null }) {
   const [list, setList] = useState<Athlete[]>(store.lastGroup)
   const [name, setName] = useState('')
+  const [bib, setBib] = useState('')
   const [hint, setHint] = useState(isIOS && !standalone)
   const [splits, setSplits] = useState(store.lastSplits)
 
   const has = (n: string) => list.some((a) => a.name.toLowerCase() === n.trim().toLowerCase())
-  const add = (a: Athlete) => !has(a.name) && setList((l) => [...l, a])
+  const add = (a: Athlete) => !has(a.name) && setList((l) => [...l, { ...a, withPrev: undefined }])
   const submit = (e: Event) => {
     e.preventDefault()
     const n = name.trim()
     if (!n) return
     const known = store.roster.find((a) => a.name.toLowerCase() === n.toLowerCase())
-    add(known ?? { id: uid(), name: n })
+    const b = parseBib(bib)
+    add({ ...(known ?? { id: uid(), name: n }), withPrev: undefined, ...(b !== undefined ? { bib: b } : {}) })
     setName('')
+    setBib('')
   }
   const recents = store.roster.filter((a) => !has(a.name))
 
@@ -54,7 +59,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
         )}
 
         <form onSubmit={submit} style={{ marginTop: 14 }}>
-          <label class="label" for="nm">Ajouter un athlète</label>
+          <label class="label" for="nm">Ajouter un athlète · nom et dossard</label>
           <div class="field">
             <input
               id="nm"
@@ -63,6 +68,15 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
               placeholder="Nom de l'athlète"
               autocapitalize="words"
               autocomplete="off"
+              enterkeyhint="next"
+            />
+            <input
+              class="bib-in mono"
+              value={bib}
+              onInput={(e) => setBib((e.target as HTMLInputElement).value)}
+              placeholder="n°"
+              inputMode="numeric"
+              aria-label="Dossard"
               enterkeyhint="done"
             />
             <button type="submit" class="add" aria-label="Ajouter"><Icon name="plus" size={28} stroke={2.6} /></button>
@@ -70,7 +84,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
         </form>
 
         <div class="section-head">
-          <span class="label white">Participants</span>
+          <span class="label white">Ordre de départ</span>
           <span class="count">{list.length} athlète{list.length > 1 ? 's' : ''}</span>
         </div>
 
@@ -85,17 +99,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
             </p>
           </div>
         ) : (
-          <ul class={`roster ${list.length > 8 ? 'dense' : ''}`}>
-            {list.map((a, i) => (
-              <li key={a.id}>
-                <span class="idx">{String(i + 1).padStart(2, '0')}</span>
-                <span class="name">{a.name}</span>
-                <button class="rm" onClick={() => setList((l) => l.filter((x) => x.id !== a.id))} aria-label={`Retirer ${a.name}`}>
-                  <Icon name="x" />
-                </button>
-              </li>
-            ))}
-          </ul>
+          <StartOrder athletes={list} onChange={setList} onRemove={(id) => setList((l) => l.filter((x) => x.id !== id))} />
         )}
 
         {recents.length > 0 && (
@@ -103,7 +107,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
             <span class="label">Récents</span>
             <div class="chips">
               {recents.map((a) => (
-                <button key={a.id} class="chip" onClick={() => add(a)}><Icon name="plus" size={18} stroke={2.6} />{a.name}</button>
+                <button key={a.id} class="chip" onClick={() => add(a)}><Icon name="plus" size={18} stroke={2.6} />{label(a)}</button>
               ))}
             </div>
           </section>

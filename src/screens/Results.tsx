@@ -57,7 +57,7 @@ export function Results({ store, session }: { store: Store; session: Session }) 
               >
                 <span class="rk">{r.rank ?? '–'}</span>
                 <span style={{ minWidth: 0 }}>
-                  <span class="nm">{r.athlete.name}</span>
+                  <span class="nm">{r.athlete.bib !== undefined && <span class="bibn mono">{r.athlete.bib}</span>}{r.athlete.name}</span>
                   <span class="sub">{r.runs.length} passage{r.runs.length > 1 ? 's' : ''}</span>
                 </span>
                 <span>

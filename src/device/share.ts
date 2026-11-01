@@ -9,11 +9,12 @@ const sec = (ms: number) => Math.floor(ms / 10) / 100
 /** Texte du classement, formaté pour WhatsApp (*gras*). */
 export function resultsText(s: Session): string {
   const lines = ranking(s).map((r) => {
-    if (!r.rank) return `–  ${r.athlete.name} · pas de temps`
+    const who = r.athlete.bib !== undefined ? `${r.athlete.bib} ${r.athlete.name}` : r.athlete.name
+    if (!r.rank) return `–  ${who} · pas de temps`
     const gap = r.gap ? `  (${fmtGap(r.gap)})` : ''
     const best = r.runs.find((x) => x.time === r.best)
     const inters = best?.splits.length ? `\n     ${best.splits.map((x, i) => `int${i + 1} ${fmtDuration(x)}`).join(' · ')}` : ''
-    return `${r.rank}. *${r.athlete.name}* — ${fmtDuration(r.best!)}${gap}${inters}`
+    return `${r.rank}. *${who}* — ${fmtDuration(r.best!)}${gap}${inters}`
   })
   return `*TCK Chrono* · ${fmtDate(s.createdAt)}\n\n${lines.join('\n')}`
 }
@@ -27,9 +28,10 @@ export function resultsSheets(s: Session) {
   const inter = Array.from({ length: n }, (_, i) => `Inter ${i + 1}`)
   const rank = ranking(s)
   const classement: Cell[][] = [
-    ['Rang', 'Athlète', 'Meilleur temps', 'Écart', 'Meilleur (s)', 'Passages'],
+    ['Rang', 'Dossard', 'Athlète', 'Meilleur temps', 'Écart', 'Meilleur (s)', 'Passages'],
     ...rank.map((r) => [
       r.rank ?? null,
+      r.athlete.bib ?? null,
       r.athlete.name,
       r.best !== undefined ? fmtDuration(r.best) : 'Pas de temps',
       r.gap ? fmtGap(r.gap) : null,
@@ -37,10 +39,11 @@ export function resultsSheets(s: Session) {
       r.runs.length
     ])
   ]
-  const passages: Cell[][] = [['Athlète', 'Passage', ...inter, 'Temps', 'Temps (s)', 'Meilleur']]
+  const passages: Cell[][] = [['Dossard', 'Athlète', 'Passage', ...inter, 'Temps', 'Temps (s)', 'Meilleur']]
   for (const r of rank)
     r.runs.forEach((run, i) =>
       passages.push([
+        r.athlete.bib ?? null,
         r.athlete.name,
         i + 1,
         ...inter.map((_, j) => (run.splits[j] !== undefined ? fmtDuration(run.splits[j]) : null)),
@@ -50,8 +53,8 @@ export function resultsSheets(s: Session) {
       ])
     )
   return [
-    { name: 'Classement', rows: classement, widths: [7, 22, 15, 12, 13, 10] },
-    { name: 'Passages', rows: passages, widths: [22, 9, ...inter.map(() => 12), 12, 11, 10] }
+    { name: 'Classement', rows: classement, widths: [7, 9, 22, 15, 12, 13, 10] },
+    { name: 'Passages', rows: passages, widths: [9, 22, 9, ...inter.map(() => 12), 12, 11, 10] }
   ]
 }
 

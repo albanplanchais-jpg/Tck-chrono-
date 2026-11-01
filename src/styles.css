@@ -501,3 +501,55 @@ a.btn { text-decoration: none; color: inherit; }
 .tap.logo:disabled { opacity: .4; }
 .timer:not(.keeper) .timer-head .label { white-space: nowrap; }
 .timer:not(.keeper) .timer-head .pill { padding: 0 8px; font-size: 12px; }
+
+/* ——— Dossards et ordre de départ ——— */
+.field .bib-in, .join .bib-in {
+  width: 78px; flex: none; height: 64px; border: 2px solid var(--white); background: var(--black); color: var(--white);
+  font-size: 18px; font-weight: 800; text-align: center; padding: 0 6px; outline: none; border-radius: 0;
+}
+.join .bib-in { height: 58px; }
+.bib-in::placeholder, .bib::placeholder { color: var(--g4); font-weight: 600; }
+.bibn { display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 5px; margin-right: 8px; background: var(--white); color: var(--black); font-size: 12px; font-weight: 800; border-radius: 4px; flex: none; vertical-align: middle; }
+.bibn.big { min-width: 44px; height: 34px; font-size: 20px; margin-right: 12px; }
+.rows.dense .bibn { min-width: 24px; height: 18px; font-size: 10px; margin-right: 6px; }
+.ranking.dense .bibn { min-width: 26px; height: 20px; font-size: 11px; }
+.ranking li.first .bibn { background: var(--black); color: var(--white); }
+.rank-row .nm { display: flex !important; align-items: center; }
+
+.order { padding-bottom: 12px; }
+.order-tools { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 0 10px; border-bottom: 2px solid var(--white); }
+.waves > li { display: grid; grid-template-columns: 30px 1fr; border-bottom: 1px solid var(--g3); }
+
+.waves > li.grp { box-shadow: inset 3px 0 0 var(--white); }
+.waves .slot { align-self: center; font-size: 14px; font-weight: 800; color: var(--g4); padding-left: 6px; }
+.waves > li.grp .slot { color: var(--white); }
+.waves ul li { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto 34px auto; align-items: center; gap: 6px; min-height: 52px; }
+.waves ul li + li { border-top: 1px dashed var(--g3); }
+.waves ul li.gone .nm { color: var(--g4); }
+.waves .bib { width: 58px; height: 38px; border: 2px solid var(--g3); background: var(--g1); color: var(--white); font-size: 16px; font-weight: 800; text-align: center; border-radius: 6px; outline: none; }
+.waves .bib:focus { border-color: var(--white); }
+.waves .nm { font-size: 17px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.waves .mini { height: 32px; padding: 0 9px; border: 1.5px solid var(--g3); border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.waves .mini.on { background: var(--white); color: var(--black); border-color: var(--white); }
+.waves .arrows { display: flex; flex-direction: column; gap: 2px; }
+.waves .arrows button { width: 34px; height: 22px; display: grid; place-items: center; border: 1.5px solid var(--g3); border-radius: 5px; }
+.waves .arrows button:disabled { opacity: .2; }
+.waves .rm { width: 36px; height: 36px; margin: 0; }
+.waves .pick { grid-column: 1 / -1; padding: 6px 0 12px 30px; display: flex; flex-direction: column; gap: 8px; }
+.waves .pick .chips { padding: 0; gap: 6px; }
+.waves .pick .chip { height: 38px; padding: 0 12px; font-size: 14px; }
+.setup .order { margin-top: 4px; }
+.setup .section-head + .order .order-tools { border-top: 0; }
+
+.order-btn { text-align: left; color: var(--white) !important; text-decoration: underline; text-underline-offset: 3px; }
+.rows li.with-prev { border-top: 0; box-shadow: inset 3px 0 0 var(--white); }
+.rows li.with-prev .nm { padding-left: 8px; }
+.rows li:has(+ li.with-prev) { box-shadow: inset 3px 0 0 var(--white); }
+.next-tag { flex: none; margin-left: 6px; font-family: var(--mono); font-size: 9px; font-weight: 800; letter-spacing: .04em; border: 1.5px solid var(--white); padding: 1px 3px; color: var(--white); }
+.rows.dense .next-tag { font-size: 8px; padding: 0 2px; }
+.order-tools .label { white-space: nowrap; font-size: 11px; }
+.order-tools .pill { white-space: nowrap; }
+.layer .layer-head h2 { margin-top: 2px; }
+.rows li.next-wave:not(.running) { background: #161616; }
+.next-mark { flex: none; font-size: 14px; margin-right: 4px; color: var(--white); }
+.rows .nm { min-width: 0; overflow: hidden; }

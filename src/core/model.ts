@@ -3,6 +3,10 @@ export type Kind = 'start' | 'split' | 'finish'
 export interface Athlete {
   id: string
   name: string
+  /** Numéro de dossard. */
+  bib?: number
+  /** Part en même temps que l'athlète précédent dans l'ordre de départ (même vague). */
+  withPrev?: boolean
 }
 
 /** Un tap = un instant capturé. Les temps sont toujours recalculés à partir des taps. */
