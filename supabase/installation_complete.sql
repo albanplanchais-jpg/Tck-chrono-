@@ -54,6 +54,8 @@ create policy "coach_reads_joins" on public.session_joins for select to authenti
 -- Pas de policy insert : les athlètes passent uniquement par join_session().
 
 -- ───────────── Accès public par code (sans compte) ─────────────
+-- (Supprimée d'abord : une version plus récente, avec d'autres colonnes, peut déjà exister — fichier 0005.)
+drop function if exists public.public_session(text);
 create or replace function public.public_session(p_code text)
 returns table (code text, created_at timestamptz, ended_at timestamptz, splits int, athletes jsonb, taps jsonb, updated_at timestamptz)
 language sql stable security definer set search_path = '' as $$
@@ -163,6 +165,8 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- La page athlète voit aussi les taps des chronométreurs.
+-- (Supprimée d'abord : une version plus récente, avec d'autres colonnes, peut déjà exister — fichier 0005.)
+drop function if exists public.public_session(text);
 create or replace function public.public_session(p_code text)
 returns table (code text, created_at timestamptz, ended_at timestamptz, splits int, athletes jsonb, taps jsonb, updated_at timestamptz)
 language sql stable security definer set search_path = '' as $$
@@ -516,8 +520,5 @@ grant execute on function public.my_sessions() to authenticated;
 
 
 -- ────────────────────────────────────────────────────────────
--- DERNIÈRE ÉTAPE : te valider comme coach (accès à la liste FFCK).
--- Remplace l'adresse ci-dessous par celle de TON compte coach, puis enlève les deux tirets « -- » au début des 2 lignes.
+-- DERNIÈRE ÉTAPE (requête séparée) : te valider comme coach — voir les instructions.
 -- ────────────────────────────────────────────────────────────
--- insert into public.coach_approvals (user_id, note)
--- select id, 'coach Torcy' from auth.users where email = 'TON-EMAIL-ICI' on conflict (user_id) do nothing;

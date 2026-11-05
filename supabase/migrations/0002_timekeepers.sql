@@ -63,6 +63,8 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- La page athlète voit aussi les taps des chronométreurs.
+-- (Supprimée d'abord : une version plus récente, avec d'autres colonnes, peut déjà exister — fichier 0005.)
+drop function if exists public.public_session(text);
 create or replace function public.public_session(p_code text)
 returns table (code text, created_at timestamptz, ended_at timestamptz, splits int, athletes jsonb, taps jsonb, updated_at timestamptz)
 language sql stable security definer set search_path = '' as $$
