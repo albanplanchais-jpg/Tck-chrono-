@@ -14,6 +14,16 @@ L'ajout à la main reste toujours possible. La liste est gardée sur le téléph
 - **Sécurité de publication** : si la structure de la source change, si elle est vide, si trop de lignes sont illisibles ou si le nombre d'actifs chute de plus de 30 %, la tâche s'arrête **sans rien publier** (la PWA garde l'ancienne liste) et une alerte part (e-mail GitHub, et Discord si `DISCORD_WEBHOOK_URL` est défini).
 - **Diff quotidien** : ajouts, modifications, licenciés disparus **marqués inactifs** (pas supprimés, pour ne pas casser l'historique des séances), réactivations. Les inactifs restent 400 jours dans le fichier, puis en sortent.
 
+## Source « classement descente » (en attendant l'export FFCK)
+Adaptateur `scripts/ffck-sync/sources/classement.mjs` pour le site indépendant *classements-descente.plargentanck.fr*
+(liste des classements puis athlètes de chaque classement : prénom, NOM, club, catégorie ; embarcation déduite de la catégorie).
+- **À n'activer qu'avec l'accord de l'auteur du site** (ce n'est pas la FFCK, l'accord fédéral ne le couvre pas).
+- Pas de n° de licence : identifiant stable `CL-…` calculé à partir du nom, du prénom et du club (homonymes du même club confondus).
+  Le lien « compte athlète ↔ licence » ne fonctionne donc pas avec cette source.
+- Réglages : `FFCK_SOURCE=classement`, `CLASSEMENT_RANKING_URL` (adresse des athlètes d'un classement, avec `{id}`, à confirmer
+  dans l'onglet Réseau du navigateur), `CLASSEMENT_LIST_URL` (défaut `…/ranking/list`), `CLASSEMENT_MAX` (défaut 80 classements).
+- Même politesse et mêmes garde-fous que les autres sources (1,5 s entre requêtes, arrêt sans publier si la structure change).
+
 ## Où sont les données (RGPD — beaucoup de licenciés sont mineurs)
 - Table `licensees` et fichier `licencies.json.gz` dans un **bucket Supabase privé** (`ffck`) : jamais publics, jamais indexables.
 - Le fichier n'est téléchargeable **que par les coachs validés** (table `coach_approvals`). Un compte créé librement n'y a pas accès.

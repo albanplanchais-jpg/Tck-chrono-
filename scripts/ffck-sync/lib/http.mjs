@@ -10,7 +10,7 @@ export function userAgent() {
   return `TCK Chrono (synchro licenciés ; contact : ${contact})`
 }
 
-export async function politeFetch(url, init = {}, { pauseMs = 1500, tries = 5, timeoutMs = 60000 } = {}) {
+export async function politeFetch(url, init = {}, { pauseMs = Number(process.env.FFCK_PAUSE_MS ?? 1500), tries = 5, timeoutMs = 60000 } = {}) {
   for (let attempt = 1; ; attempt++) {
     const wait = last + pauseMs - Date.now()
     if (wait > 0) await sleep(wait)

@@ -2,7 +2,7 @@
 # Tourne à 2 h et 3 h UTC ; le script ne continue qu'à 4 h heure de Paris (été comme hiver).
 # Secrets à créer (Settings → Secrets and variables → Actions) :
 #   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY            (jamais dans la PWA)
-#   FFCK_SOURCE (csv | api), FFCK_CONTACT (e-mail ou téléphone de contact pour la FFCK)
+#   FFCK_SOURCE (csv | api | classement), FFCK_CONTACT (e-mail ou téléphone de contact pour la FFCK)
 #   selon la source : FFCK_CSV_URL + FFCK_AUTH_HEADER, ou FFCK_API_URL + FFCK_API_TOKEN
 #   facultatif : DISCORD_WEBHOOK_URL (alerte en cas d'échec ; sinon e-mail GitHub)
 name: Synchro licenciés FFCK
@@ -46,6 +46,10 @@ jobs:
           FFCK_ENCODING: ${{ secrets.FFCK_ENCODING }}
           FFCK_API_URL: ${{ secrets.FFCK_API_URL }}
           FFCK_API_TOKEN: ${{ secrets.FFCK_API_TOKEN }}
+          # Source « classement » (site indépendant, uniquement avec l'accord de son auteur)
+          CLASSEMENT_LIST_URL: ${{ secrets.CLASSEMENT_LIST_URL }}
+          CLASSEMENT_RANKING_URL: ${{ secrets.CLASSEMENT_RANKING_URL }}
+          CLASSEMENT_MAX: ${{ secrets.CLASSEMENT_MAX }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           # Exécution planifiée : seulement à 4 h, heure de Paris.
           FFCK_ONLY_AT_PARIS_HOUR: ${{ github.event_name == 'schedule' && '4' || '' }}
