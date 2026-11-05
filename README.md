@@ -18,8 +18,10 @@ Seuls les *taps* sont enregistrés ; tous les temps sont recalculés (`src/core/
 
 - **Espace coach** (onglets *Séance · Historique · Profil*) : toutes les séances enregistrées (titre, date, athlètes, passages, meilleur temps), consultables à tout moment ; profil avec statistiques, **« Mon groupe »** (athlètes enregistrés en base, meilleur temps, nombre de séances, fiche par athlète), réglages du chrono (précision 1/10 ou 1/100, vibration, écran allumé, bip) et export Excel de toutes les séances.
 
+- **Séance** : nom et commentaire (ex. « beaucoup de vent ») modifiables pendant, après et depuis l'historique ; ordre de départ par glisser-déposer ; **chrono général** en haut (démarre au 1er départ ou avec ▶, intervalle 15 s / 30 s / 1 min / 2 min avec compte à rebours, prochain départ et bips 3-2-1). WhatsApp : tous les passages et inters ; Excel : écarts au 1er, à son meilleur et aux inters.
+
 ### Mise en place
-1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`, puis `0002_timekeepers.sql`, puis `0003_bibs.sql`, puis `0004_history_athletes.sql` (dans l'ordre).
+1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`, puis `0002_timekeepers.sql`, puis `0003_bibs.sql`, puis `0004_history_athletes.sql`, puis `0005_comment_general.sql` (dans l'ordre).
 2. Supabase → **Authentication → URL Configuration** : *Site URL* = l'URL Vercel (ex. `https://tck-chrono.vercel.app`), et l'ajouter aux *Redirect URLs*.
 3. Vercel → **Settings → Environment Variables** : `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (clé *anon/publishable*, jamais la *service_role*), puis redéployer.
 

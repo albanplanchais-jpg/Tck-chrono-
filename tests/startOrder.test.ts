@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { moveWave, parseBib, sortByBib, startAlone, startWith, waveNumbers, waves } from '../src/core/startOrder'
+import { moveWave, moveWaveTo, parseBib, sortByBib, startAlone, startWith, waveNumbers, waves } from '../src/core/startOrder'
 import type { Athlete } from '../src/core/model'
 
 const L = (...xs: [string, number?][]): Athlete[] => xs.map(([id, bib]) => ({ id, name: id, bib }))
@@ -17,6 +17,12 @@ describe('ordre de départ', () => {
     l = moveWave(l, 'c', 1)
     expect(ids(l)).toBe('b | a+c')
     expect(moveWave(l, 'b', -1)).toBe(l)
+  })
+  it('glisse une vague à une autre place', () => {
+    const l = startWith(L(['a'], ['b'], ['c'], ['d']), 'b', 'a') // a+b | c | d
+    expect(ids(moveWaveTo(l, 'b', 2))).toBe('c | d | a+b')
+    expect(ids(moveWaveTo(l, 'd', 0))).toBe('d | a+b | c')
+    expect(moveWaveTo(l, 'c', 1)).toBe(l)
   })
   it('sort un athlète de sa vague', () => {
     const l = startAlone(startWith(L(['a'], ['b'], ['c']), 'c', 'a'), 'a')

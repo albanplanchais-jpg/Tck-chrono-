@@ -33,7 +33,7 @@ export function useSessionStore() {
   }, [])
 
   const start = useCallback(
-    (athletes: Athlete[], splits = 0, title = '') => {
+    (athletes: Athlete[], splits = 0, title = '', comment = '') => {
       setLastSplits(splits)
       set('splits', splits)
       const clean = athletes.map(({ withPrev: _w, ...a }) => a)
@@ -44,6 +44,7 @@ export function useSessionStore() {
       setSession({
         id: uid(), createdAt: Date.now(), athletes, taps: [], splits,
         ...(t ? { title: t } : {}),
+        ...(comment.trim() ? { comment: comment.trim().slice(0, 500) } : {}),
         ...(cloudEnabled ? { code: newCode() } : {})
       })
     },
@@ -84,6 +85,12 @@ export function useSessionStore() {
       return next
     })
   }, [])
+
+  /** Titre, commentaire, chrono général. */
+  const setMeta = useCallback(
+    (patch: Partial<Pick<Session, 'title' | 'comment' | 'general'>>) => setSession((s) => (s ? { ...s, ...patch } : s)),
+    []
+  )
 
   /** Nouvel ordre de départ / dossards pendant la séance. */
   const setAthletes = useCallback((athletes: Athlete[]) => setSession((s) => (s ? { ...s, athletes } : s)), [])
@@ -174,7 +181,7 @@ export function useSessionStore() {
     setSession(undefined)
   }, [session])
 
-  return { ready, session, roster, lastGroup, lastSplits, start, addTap, mergeRoster, removeFromRoster, addToRoster, setAthletes, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
+  return { ready, session, roster, lastGroup, lastSplits, start, addTap, setMeta, mergeRoster, removeFromRoster, addToRoster, setAthletes, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
 }
 
 export type Store = ReturnType<typeof useSessionStore>

@@ -37,6 +37,18 @@ export function moveWave(list: Athlete[], id: string, dir: -1 | 1): Athlete[] {
   return flatten(w)
 }
 
+/** Déplace toute la vague de l'athlète à la position `to` (0 = premier départ). */
+export function moveWaveTo(list: Athlete[], id: string, to: number): Athlete[] {
+  const w = waves(list)
+  const i = w.findIndex((g) => g.some((a) => a.id === id))
+  if (i < 0) return list
+  const j = Math.max(0, Math.min(w.length - 1, to))
+  if (i === j) return list
+  const [g] = w.splice(i, 1)
+  w.splice(j, 0, g)
+  return flatten(w)
+}
+
 /** L'athlète `id` part avec la vague de `targetId` (il est placé à la fin de cette vague). */
 export function startWith(list: Athlete[], id: string, targetId: string): Athlete[] {
   if (id === targetId) return list

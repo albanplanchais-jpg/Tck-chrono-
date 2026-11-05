@@ -10,7 +10,7 @@ import { KeeperView } from './screens/KeeperView'
 import { cloudEnabled } from './cloud/supabase'
 import { useAuth } from './cloud/auth'
 import { useCloudSync } from './cloud/sync'
-import { useCoachData } from './cloud/history'
+import { updateSessionMeta, useCoachData } from './cloud/history'
 import { History } from './screens/History'
 import { Profile } from './screens/Profile'
 import { TabBar, type Tab } from './components/TabBar'
@@ -53,7 +53,18 @@ function CoachApp() {
 
   const go = (t: Tab) => { setViewing(null); setTab(t) }
   let screen
-  if (viewing) screen = <Results session={viewing} onBack={() => setViewing(null)} />
+  if (viewing)
+    screen = (
+      <Results
+        session={viewing}
+        onBack={() => setViewing(null)}
+        onEditMeta={async (patch) => {
+          await updateSessionMeta(viewing, patch)
+          setViewing({ ...viewing, ...patch })
+          data.refresh()
+        }}
+      />
+    )
   else if (tab === 'history')
     screen = <History sessions={data.sessions} loading={data.loading} source={data.source} onOpen={setViewing} onRefresh={data.refresh} />
   else if (tab === 'profile')

@@ -13,6 +13,8 @@ import { waveOf, waves } from '../core/startOrder'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Icon } from '../components/Icon'
 import { ShareModal } from '../components/ShareModal'
+import { SessionInfo } from '../components/SessionInfo'
+import { GeneralClock } from '../components/GeneralClock'
 import type { SyncState } from '../cloud/sync'
 import { serverNow, toServer } from '../cloud/clock'
 
@@ -49,6 +51,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
   const [fixId, setFixId] = useState<string | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [orderOpen, setOrderOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
   const toastTimer = useRef<number | undefined>(undefined)
   const downAt = useRef(0)
 
@@ -95,6 +98,8 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
             .filter((x) => x && canDo(x, 'start'))
         : [r]
     const items = mates.map((x) => ({ athleteId: x.athlete.id, kind: k }))
+    // Le chrono général démarre au premier départ.
+    if (k === 'start' && session.general?.start === undefined) store.setMeta({ general: { ...session.general, start: t } })
     if (tap) store.assignMany(tap.id, items)
     else {
       items.forEach((it) => store.addAssigned(t, it.athleteId, k))
@@ -110,6 +115,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
     if (!tap || idle.length < 2) return
     const before = session.taps
     store.assignMany(tap.id, idle.map((r) => ({ athleteId: r.athlete.id, kind: 'start' as Kind })))
+    if (session.general?.start === undefined) store.setMeta({ general: { ...session.general, start: tap.t } })
     flash({ text: `${idle.length} athlètes — DÉPART`, extra: fmtClock(tap.t), undo: before })
   }
 
@@ -131,6 +137,11 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
     [session.athletes, touched]
   )
 
+  const nextLabel = useMemo(
+    () => session.athletes.filter((a) => nextWave.has(a.id)).map((a) => (a.bib !== undefined ? `${a.bib} ${a.name}` : a.name)).join(' + '),
+    [session.athletes, nextWave]
+  )
+
   const passages = results.reduce((n, r) => n + r.runs.length, 0)
 
   return (
@@ -144,6 +155,9 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
           </span>
         </div>
         <nav class="t-actions">
+          <button class="icon-btn" onClick={() => setInfoOpen(true)} aria-label="Nom et commentaire de la séance">
+            <Icon name="edit" size={18} stroke={2.2} />
+          </button>
           {session.code && (
             <button class="icon-btn" onClick={() => setShareOpen(true)} aria-label="Partager la séance">
               <Icon name="link" size={20} stroke={2.2} />
@@ -157,6 +171,13 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
           </button>
         </nav>
       </header>
+
+      <GeneralClock
+        general={session.general}
+        now={now}
+        next={nextLabel}
+        onChange={(general) => store.setMeta({ general })}
+      />
 
       <div class="status">
         {pending.length > 0 ? (
@@ -261,6 +282,15 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
       )}
 
       {shareOpen && session.code && <ShareModal code={session.code} sessionId={session.id} splits={splits} onClose={() => setShareOpen(false)} />}
+
+      {infoOpen && (
+        <SessionInfo
+          title={session.title}
+          comment={session.comment}
+          onClose={() => setInfoOpen(false)}
+          onSave={(v) => { store.setMeta({ title: v.title || undefined, comment: v.comment || undefined }); setInfoOpen(false) }}
+        />
+      )}
 
       {orderOpen && (
         <div class="layer">

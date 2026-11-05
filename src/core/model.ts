@@ -30,6 +30,10 @@ export interface Session {
   splits?: number
   /** Titre libre (ex. « Bassin · 6 × 1 min »). */
   title?: string
+  /** Commentaire libre (ex. « beaucoup de vent »). */
+  comment?: string
+  /** Chrono général pour lancer les bateaux : départ (heure commune, ms) et intervalle (s). */
+  general?: { start?: number; interval?: number }
   /** Code à 6 caractères du lien athlète (séance synchronisée en ligne). */
   code?: string
   /** Version déjà intégrée de chaque tap de chronométreur (id → updated_at). */

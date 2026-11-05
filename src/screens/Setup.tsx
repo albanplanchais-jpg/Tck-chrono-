@@ -19,6 +19,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
   const [hint, setHint] = useState(isIOS && !standalone)
   const [splits, setSplits] = useState(store.lastSplits)
   const [title, setTitle] = useState('')
+  const [comment, setComment] = useState('')
 
   const has = (n: string) => list.some((a) => a.name.toLowerCase() === n.trim().toLowerCase())
   const add = (a: Athlete) => !has(a.name) && setList((l) => [...l, { ...a, withPrev: undefined }])
@@ -62,6 +63,10 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
         <label class="title-in">
           <span class="label">Nom de la séance · facultatif</span>
           <input value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} placeholder="Bassin · 6 × 1 min" maxLength={80} />
+        </label>
+        <label class="title-in">
+          <span class="label">Commentaire · facultatif</span>
+          <input value={comment} onInput={(e) => setComment((e.target as HTMLInputElement).value)} placeholder="Beaucoup de vent, eau calme…" maxLength={500} />
         </label>
 
         <form onSubmit={submit} style={{ marginTop: 14 }}>
@@ -131,7 +136,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
             ))}
           </div>
         </div>
-        <button class="btn primary" disabled={!list.length && !cloudEnabled} onClick={() => store.start(list, splits, title)}>Démarrer la séance</button>
+        <button class="btn primary" disabled={!list.length && !cloudEnabled} onClick={() => store.start(list, splits, title, comment)}>Démarrer la séance</button>
       </footer>
     </div>
   )

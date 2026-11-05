@@ -4,7 +4,7 @@ import { loadHistory } from '../store/db'
 import { supabase } from './supabase'
 
 interface SessionRow {
-  id: string; code: string; title: string | null; created_at: string; ended_at: string | null
+  id: string; code: string; title?: string | null; comment?: string | null; general?: Session['general'] | null; created_at: string; ended_at: string | null
   splits: number; athletes: Athlete[]; taps: Session['taps']
 }
 
@@ -12,6 +12,8 @@ const toSession = (r: SessionRow): Session => ({
   id: r.id,
   code: r.code,
   title: r.title ?? undefined,
+  comment: r.comment ?? undefined,
+  general: r.general ?? undefined,
   createdAt: Date.parse(r.created_at),
   endedAt: r.ended_at ? Date.parse(r.ended_at) : undefined,
   splits: r.splits,
@@ -23,18 +25,13 @@ const toSession = (r: SessionRow): Session => ({
 export async function fetchSessions(): Promise<{ sessions: Session[]; source: 'cloud' | 'local' }> {
   const local = await loadHistory()
   if (!supabase) return { sessions: local, source: 'local' }
-  let { data, error } = await supabase
-    .from('sessions')
-    .select('id,code,title,created_at,ended_at,splits,athletes,taps')
-    .order('created_at', { ascending: false })
-    .limit(300)
-  // Repli si la migration 0004 (colonne title) n'est pas encore passée.
-  if (error && /title/.test(error.message))
-    ({ data, error } = (await supabase
-      .from('sessions')
-      .select('id,code,created_at,ended_at,splits,athletes,taps')
-      .order('created_at', { ascending: false })
-      .limit(300)) as any)
+  // Colonnes récentes en option : repli si les migrations 0004 / 0005 ne sont pas encore passées.
+  const query = (cols: string) =>
+    supabase!.from('sessions').select(cols).order('created_at', { ascending: false }).limit(300)
+  const base = 'id,code,created_at,ended_at,splits,athletes,taps'
+  let { data, error } = (await query(`${base},title,comment,general`)) as any
+  if (error) ({ data, error } = (await query(`${base},title`)) as any)
+  if (error) ({ data, error } = (await query(base)) as any)
   if (error || !data) return { sessions: local, source: 'local' }
   const cloud = (data as SessionRow[]).map(toSession)
   // Séances terminées hors ligne et pas encore envoyées : on les garde aussi.
@@ -64,6 +61,19 @@ export async function archiveAthlete(id: string): Promise<boolean> {
   if (!supabase) return false
   const { error } = await supabase.from('athletes').update({ archived: true, updated_at: new Date().toISOString() }).eq('id', id)
   return !error
+}
+
+/** Modifie titre / commentaire d'une séance passée (en ligne + copie du téléphone). */
+export async function updateSessionMeta(s: Session, patch: { title?: string; comment?: string }) {
+  const { archive } = await import('../store/db')
+  await archive({ ...s, ...patch })
+  if (!supabase) return
+  const { error } = await supabase
+    .from('sessions')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', s.id)
+  if (error && /comment/.test(error.message) && patch.title !== undefined)
+    await supabase.from('sessions').update({ title: patch.title }).eq('id', s.id)
 }
 
 export async function updateProfile(meta: { name?: string; discipline?: string; club?: string }) {

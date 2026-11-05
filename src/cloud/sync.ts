@@ -20,7 +20,7 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
   const [state, setState] = useState<SyncState>('off')
   const latest = useRef(session)
   const dirty = useRef(false)
-  const noTitle = useRef(false)
+  const missing = useRef(new Set<string>())
   const athletesKey = useRef('')
   const timer = useRef<number | undefined>(undefined)
   latest.current = session
@@ -51,12 +51,15 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
       taps: s.taps,
       updated_at: new Date().toISOString()
     }
-    if (!noTitle.current) row.title = s.title ?? null
+    const optional: Record<string, unknown> = { title: s.title ?? null, comment: s.comment ?? null, general: s.general ?? null }
+    for (const [k, v] of Object.entries(optional)) if (!missing.current.has(k)) row[k] = v
     let { error } = await supabase.from('sessions').upsert(row)
-    // Repli si la migration 0004 (colonne title) n'est pas encore passée.
-    if (error && /title/.test(error.message)) {
-      noTitle.current = true
-      delete row.title
+    // Repli si une migration récente (0004 titre, 0005 commentaire / chrono général) n'est pas encore passée.
+    for (let i = 0; error && i < 3; i++) {
+      const col = Object.keys(optional).find((k) => k in row && error!.message.includes(k))
+      if (!col) break
+      missing.current.add(col)
+      delete row[col]
       ;({ error } = await supabase.from('sessions').upsert(row))
     }
     // Les athlètes de la séance rejoignent le groupe du coach (table athletes).

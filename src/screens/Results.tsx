@@ -6,13 +6,21 @@ import type { Store } from '../store/useSession'
 import { exportXlsx, shareWhatsApp } from '../device/share'
 import { Icon } from '../components/Icon'
 import { TapLog } from '../components/TapLog'
+import { SessionInfo } from '../components/SessionInfo'
 
 /** Résultats d'une séance. Sans `store` : séance passée, consultée depuis l'historique (lecture seule). */
-export function Results({ store, session, onBack }: { store?: Store; session: Session; onBack?: () => void }) {
+export function Results({ store, session, onBack, onEditMeta }: {
+  store?: Store
+  session: Session
+  onBack?: () => void
+  /** Séance passée : enregistre le nouveau nom / commentaire. */
+  onEditMeta?: (v: { title?: string; comment?: string }) => Promise<void>
+}) {
   const rows = useMemo(() => ranking(session), [session])
   const [open, setOpen] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
   const [log, setLog] = useState(false)
+  const [info, setInfo] = useState(false)
 
   const excel = async () => {
     try {
@@ -36,6 +44,7 @@ export function Results({ store, session, onBack }: { store?: Store; session: Se
           )}
           <span class="label">{session.endedAt ? 'Séance terminée' : 'Séance en cours'}</span>
           <h1>{session.title || 'Résultats'}</h1>
+          <button class="edit-meta" onClick={() => setInfo(true)}><Icon name="edit" size={13} stroke={2.4} />{session.comment ? 'Modifier' : 'Nom, commentaire'}</button>
           <span class="res-sub">{fmtDay(session.createdAt)} · {fmtHM(session.createdAt)}{session.endedAt ? ` – ${fmtHM(session.endedAt)}` : ''}</span>
         </div>
         {store && (
@@ -45,6 +54,8 @@ export function Results({ store, session, onBack }: { store?: Store; session: Se
           </div>
         )}
       </header>
+
+      {session.comment && <p class="px res-comment">« {session.comment} »</p>}
 
       <div class="cols label" style={{ fontSize: 12 }}>
         <span>Rang</span><span>Athlète</span><span>Meilleur</span>
@@ -94,6 +105,20 @@ export function Results({ store, session, onBack }: { store?: Store; session: Se
           )
         })}
       </ol>
+
+      {info && (
+        <SessionInfo
+          title={session.title}
+          comment={session.comment}
+          onClose={() => setInfo(false)}
+          onSave={async (v) => {
+            const patch = { title: v.title || undefined, comment: v.comment || undefined }
+            if (store) store.setMeta(patch)
+            else await onEditMeta?.(patch)
+            setInfo(false)
+          }}
+        />
+      )}
 
       {log && store && <TapLog store={store} session={session} onClose={() => setLog(false)} />}
 

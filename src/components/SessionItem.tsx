@@ -21,6 +21,7 @@ export function SessionItem({ sum, onOpen }: { sum: SessionSummary; onOpen: () =
             {sum.athletes} athlète{sum.athletes > 1 ? 's' : ''} · {sum.passages} passage{sum.passages > 1 ? 's' : ''}
             {!s.endedAt && ' · en cours'}
           </small>
+          {s.comment && <i class="sess-comment">« {s.comment} »</i>}
         </span>
         <span class="sess-best">
           {sum.best ? (
