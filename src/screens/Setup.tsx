@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
-import { uid, type Athlete, type Course } from '../core/model'
-import { fmtDay } from '../core/format'
+import { MODE_LABEL, type Athlete, type Course, type Session, type SessionMode } from '../core/model'
+import { fmtOffset, pursuitPlan, type PursuitEntry } from '../core/modes'
+import { fmtDay, fmtDuration, fmtHM } from '../core/format'
 import type { Store } from '../store/useSession'
 import { Icon } from '../components/Icon'
 import { StartOrder } from '../components/StartOrder'
@@ -13,8 +14,12 @@ import { cloudEnabled } from '../cloud/supabase'
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
 
-export function Setup({ store, user, courses = [], initialCourse, ffck }: {
+export function Setup({ store, user, courses = [], initialCourse, ffck, sessions = [], onBack }: {
   store: Store
+  /** Séances passées : référence pour une poursuite. */
+  sessions?: Session[]
+  /** Retour à l'accueil de l'onglet Séance. */
+  onBack?: () => void
   /** Licenciés FFCK (autocomplétion). */
   ffck?: ReturnType<typeof useLicensees>
   user?: User | null
@@ -28,6 +33,38 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
   const [title, setTitle] = useState('')
   const [comment, setComment] = useState('')
   const [showMeta, setShowMeta] = useState(false)
+  const [mode, setMode] = useState<SessionMode>('classic')
+  // Poursuite : séance de référence et ordre / décalages calculés.
+  const [fromId, setFromId] = useState<string | null>(null)
+  const [plan, setPlan] = useState<PursuitEntry[]>([])
+  const candidates = sessions.filter((x) => x.endedAt && pursuitPlan(x).entries.length >= 2).slice(0, 12)
+  const pickSource = (src: Session) => {
+    setFromId(src.id)
+    setPlan(pursuitPlan(src).entries)
+    setTitle((t) => t || `Poursuite · ${src.title || fmtDay(src.createdAt)}`)
+  }
+  /** Retirer un athlète : les décalages repartent du plus lent restant. */
+  const removeFromPlan = (id: string) =>
+    setPlan((p) => {
+      const rest = p.filter((e) => e.athlete.id !== id)
+      const base = Math.min(...rest.map((e) => e.offset))
+      return rest.map((e) => ({ ...e, offset: e.offset - base }))
+    })
+  const begin = () => {
+    if (mode === 'pursuit') {
+      const src = sessions.find((x) => x.id === fromId)
+      store.start(plan.map((e) => ({ ...e.athlete, withPrev: undefined })), splits, title, comment, courseId, {
+        mode,
+        pursuit: {
+          fromId: fromId ?? undefined,
+          fromTitle: src?.title || (src ? fmtDay(src.createdAt) : undefined),
+          offsets: Object.fromEntries(plan.map((e) => [e.athlete.id, e.offset])),
+          refs: Object.fromEntries(plan.map((e) => [e.athlete.id, e.ref]))
+        }
+      })
+    } else store.start(list, splits, title, comment, courseId, { mode })
+  }
+  const canStart = mode === 'pursuit' ? plan.length >= 1 : !!list.length || cloudEnabled
   const [courseId, setCourseId] = useState<string | undefined>(initialCourse?.id)
   useEffect(() => {
     if (!initialCourse) return
@@ -52,6 +89,9 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
   return (
     <div class="screen setup">
       <div class="scroll px">
+        {onBack && (
+          <button class="back" onClick={onBack}><Icon name="left" size={18} stroke={2.6} />Accueil</button>
+        )}
         <header class="head brand">
           <div>
             <span class="label">{fmtDay(Date.now())}</span>
@@ -59,6 +99,19 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
           </div>
           <img src="/logo.png" alt="Torcy Canoë-Kayak" width={72} height={72} />
         </header>
+
+        <div class="segment n3 mode-pick" role="group" aria-label="Type de séance">
+          {(['classic', 'mass', 'pursuit'] as SessionMode[]).map((m) => (
+            <button key={m} class={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => setMode(m)}>{MODE_LABEL[m]}</button>
+          ))}
+        </div>
+        <p class="mode-help">
+          {mode === 'classic'
+            ? 'Chacun part quand tu touches son DÉP (seul ou par vagues).'
+            : mode === 'mass'
+              ? 'Tout le monde part en même temps : un seul toucher sur le logo donne le départ.'
+              : 'Le plus lent part en premier, chacun avec son écart de temps : le premier arrivé gagne. Départs donnés automatiquement.'}
+        </p>
 
         {hint && (
           <div class="banner">
@@ -81,6 +134,39 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
           </div>
         )}
 
+        {mode === 'pursuit' ? (
+          <section class="pursuit">
+            <span class="label white">Séance de référence</span>
+            {!candidates.length && <p class="muted">Il faut une séance terminée avec au moins 2 athlètes chronométrés.</p>}
+            <div class="chips src-pick">
+              {candidates.map((x) => (
+                <button key={x.id} class={`chip ${fromId === x.id ? 'on' : ''}`} onClick={() => pickSource(x)}>
+                  {x.title || 'Séance'} · {fmtDay(x.createdAt)} {fmtHM(x.createdAt)}
+                </button>
+              ))}
+            </div>
+            {plan.length > 0 && (
+              <>
+                <div class="order-tools"><span class="label white">Ordre de départ · {plan.length}</span><span class="label">Écart</span></div>
+                <ol class="plan">
+                  {plan.map((e, i) => (
+                    <li key={e.athlete.id}>
+                      <span class="idx mono">{i + 1}</span>
+                      <span class="p-name">
+                        <b>{e.athlete.bib !== undefined && <span class="bibn mono">{e.athlete.bib}</span>}{e.athlete.name}</b>
+                        <small class="mono">réf. {fmtDuration(e.ref)}</small>
+                      </span>
+                      <b class="mono p-off">{fmtOffset(e.offset)}</b>
+                      <button class="rm" onClick={() => removeFromPlan(e.athlete.id)} aria-label={`Retirer ${e.athlete.name}`}><Icon name="x" size={18} /></button>
+                    </li>
+                  ))}
+                </ol>
+                <p class="mode-help">Départ du dernier à {fmtOffset(Math.max(...plan.map((e) => e.offset)))} après le top.</p>
+              </>
+            )}
+          </section>
+        ) : (
+          <>
         <div style={{ marginTop: 14 }}>
           <LicenseeSearch
             index={ffck?.index}
@@ -118,6 +204,9 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
             </div>
           </section>
         )}
+          </>
+        )}
+
         <div class="meta-box">
           {showMeta ? (
             <>
@@ -150,7 +239,9 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
             ))}
           </div>
         </div>
-        <button class="btn primary" disabled={!list.length && !cloudEnabled} onClick={() => store.start(list, splits, title, comment, courseId)}>Démarrer la séance</button>
+        <button class="btn primary" disabled={!canStart} onClick={begin}>
+          {mode === 'classic' ? 'Démarrer la séance' : mode === 'mass' ? 'Préparer le mass start' : 'Préparer la poursuite'}
+        </button>
       </footer>
     </div>
   )

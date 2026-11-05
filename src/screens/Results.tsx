@@ -58,10 +58,14 @@ export function Results({ store, session, onBack, onEditMeta, highlight }: {
         )}
       </header>
 
+      {session.mode === 'pursuit' && (
+        <p class="px res-mode">Poursuite · classement à l'arrivée{session.pursuit?.fromTitle ? ` · réf. ${session.pursuit.fromTitle}` : ''}</p>
+      )}
+      {session.mode === 'mass' && <p class="px res-mode">Mass start · départ commun</p>}
       {session.comment && <p class="px res-comment">« {session.comment} »</p>}
 
       <div class="cols label" style={{ fontSize: 12 }}>
-        <span>Rang</span><span>Athlète</span><span>Meilleur</span>
+        <span>{session.mode === 'pursuit' ? 'Arrivée' : 'Rang'}</span><span>Athlète</span><span>{session.mode === 'pursuit' ? 'Course' : 'Meilleur'}</span>
       </div>
 
       <ol class={`scroll ranking ${rows.length > 8 ? 'dense' : ''}`}>

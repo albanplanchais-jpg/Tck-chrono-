@@ -36,6 +36,8 @@ export interface Course {
   notes?: string
 }
 
+export type SessionMode = 'classic' | 'mass' | 'pursuit'
+
 export interface Session {
   id: string
   createdAt: number
@@ -44,6 +46,10 @@ export interface Session {
   taps: Tap[]
   /** Nombre de chronos intermédiaires attendus par passage (0 = aucun). */
   splits?: number
+  /** Type de séance : départs libres (défaut), départ groupé de tous, ou poursuite. */
+  mode?: SessionMode
+  /** Poursuite : décalage de départ de chaque athlète (ms après le top départ) et temps de référence. */
+  pursuit?: { fromId?: string; fromTitle?: string; offsets: Record<string, number>; refs: Record<string, number> }
   /** Parcours sur lequel la séance a été faite. */
   courseId?: string
   /** Coach qui a chronométré (séances partagées). Absent = séance de ce téléphone. */
@@ -60,6 +66,8 @@ export interface Session {
   /** Version déjà intégrée de chaque tap de chronométreur (id → updated_at). */
   remoteSeen?: Record<string, string>
 }
+
+export const MODE_LABEL: Record<SessionMode, string> = { classic: 'Classique', mass: 'Mass start', pursuit: 'Poursuite' }
 
 export const KIND_LABEL: Record<Kind, string> = { start: 'DÉPART', split: 'INTER', finish: 'ARRIVÉE' }
 

@@ -4,7 +4,7 @@ import { loadCourses, loadHistory, saveCourses } from '../store/db'
 import { supabase } from './supabase'
 
 interface SessionRow {
-  id: string; code: string; title?: string | null; comment?: string | null; general?: Session['general'] | null; course_id?: string | null; coach_id?: string; coach_name?: string | null; created_at: string; ended_at: string | null
+  id: string; code: string; title?: string | null; comment?: string | null; general?: Session['general'] | null; course_id?: string | null; coach_id?: string; coach_name?: string | null; mode?: Session['mode'] | null; pursuit?: Session['pursuit'] | null; created_at: string; ended_at: string | null
   splits: number; athletes: Athlete[]; taps: Session['taps']
 }
 
@@ -17,6 +17,8 @@ export const toSession = (r: SessionRow): Session => ({
   courseId: r.course_id ?? undefined,
   coachId: r.coach_id,
   coachName: r.coach_name ?? undefined,
+  mode: r.mode ?? undefined,
+  pursuit: r.pursuit ?? undefined,
   createdAt: Date.parse(r.created_at),
   endedAt: r.ended_at ? Date.parse(r.ended_at) : undefined,
   splits: r.splits,
@@ -30,7 +32,7 @@ export async function fetchSessions(): Promise<{ sessions: Session[]; source: 'c
   if (!supabase) return { sessions: local, source: 'local' }
   // Colonnes récentes en option : on retire celles qui n'existent pas encore (migrations 0004 à 0007).
   const base = 'id,code,coach_id,created_at,ended_at,splits,athletes,taps'
-  let optional = ['title', 'comment', 'general', 'course_id', 'coach_name']
+  let optional = ['title', 'comment', 'general', 'course_id', 'coach_name', 'mode', 'pursuit']
   const uid = (await supabase.auth.getSession()).data.session?.user.id
   // Mes séances d'abord (jusqu'à 500), puis les plus récentes des autres coachs (150) :
   // les séances partagées ne doivent jamais pousser les miennes hors de l'historique.
@@ -41,7 +43,7 @@ export async function fetchSessions(): Promise<{ sessions: Session[]; source: 'c
   }
   let data: any = null
   let error: any = null
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 9; i++) {
     const cols = [base, ...optional].join(',')
     const [mine, others] = await Promise.all([run(cols, 'mine'), uid ? run(cols, 'others') : Promise.resolve({ data: [], error: null })])
     error = mine.error ?? others.error

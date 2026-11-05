@@ -10,6 +10,7 @@ import { TapLog } from '../components/TapLog'
 import { AthleteFix } from '../components/AthleteFix'
 import { StartOrder } from '../components/StartOrder'
 import { waveOf, waves } from '../core/startOrder'
+import { schedule } from '../core/modes'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Icon } from '../components/Icon'
 import { ShareModal } from '../components/ShareModal'
@@ -26,6 +27,12 @@ const fmtElapsed = (ms: number) => {
   const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, sec = s % 60
   const p = (n: number) => String(n).padStart(2, '0')
   return h ? `${h}:${p(m)}:${p(sec)}` : `${m}:${p(sec)}`
+}
+
+/** Temps avant un départ programmé : « 7 s », « 1:15 ». */
+const waitLabel = (ms: number) => {
+  const sec = Math.ceil(ms / 1000)
+  return sec < 60 ? `${sec} s` : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 }
 
 const SHORT: Record<Kind, string> = { start: 'DÉP', split: 'INT', finish: 'ARR' }
@@ -59,8 +66,23 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
   const kinds: Kind[] = splits > 0 ? ['start', 'split', 'finish'] : ['start', 'finish']
   const results = useMemo(() => computeAll(session), [session])
   const pending = useMemo(() => pendingTaps(session), [session])
-  const running = results.filter((r) => r.openStart !== undefined)
+  // Poursuite : les départs sont programmés ; un athlète pas encore parti n'est pas « en course ».
+  const started = (r: AthleteResult) => r.openStart !== undefined && r.openStart <= now
+  const running = results.filter(started)
   const idle = results.filter((r) => r.openStart === undefined)
+  // Mass start / poursuite : avant le top départ, le logo donne le départ.
+  const special = session.mode === 'mass' || session.mode === 'pursuit'
+  const awaitingTop = special && session.general?.start === undefined
+  const plan = useMemo(
+    () =>
+      session.mode === 'pursuit' && session.general?.start !== undefined
+        ? schedule(session, session.general.start).map((x) => {
+            const a = session.athletes.find((y) => y.id === x.athleteId)!
+            return { t: x.t, label: a.bib !== undefined ? `${a.bib} ${a.name}` : a.name }
+          })
+        : undefined,
+    [session.mode, session.general?.start, session.athletes]
+  )
 
   const flash = (t: Toast) => {
     setToast(t)
@@ -72,14 +94,29 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
   const impulse = (e: PointerEvent) => {
     e.preventDefault()
     setPressed(true)
-    store.addTap(eventTime(e))
     tapFeedback()
+    if (awaitingTop) return topStart(eventTime(e))
+    store.addTap(eventTime(e))
+  }
+
+  /** Top départ : mass start (tout le monde) ou poursuite (chacun à son écart, programmé). */
+  const topStart = (t0: number) => {
+    const before = session.taps
+    const plan = schedule(session, t0)
+    store.addAssignedMany(plan.map((x) => ({ ...x, kind: 'start' as Kind })))
+    store.setMeta({ general: { ...session.general, start: t0 } })
+    const first = session.athletes.find((a) => a.id === plan[0]?.athleteId)
+    flash({
+      text: session.mode === 'mass' ? `DÉPART — ${plan.length} athlètes` : `Top départ · ${first?.name ?? ''} part`,
+      extra: session.mode === 'mass' ? fmtClock(t0) : `${plan.length} départs programmés`,
+      undo: before
+    })
   }
 
   const canDo = (r: AthleteResult, k: Kind) =>
     k === 'start'
       ? r.openStart === undefined
-      : r.openStart !== undefined && (k !== 'split' || r.openSplits.length < splits)
+      : started(r) && (k !== 'split' || r.openSplits.length < splits)
 
   /**
    * Bouton d'une ligne : prend l'impulsion en attente la plus ancienne,
@@ -176,6 +213,8 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
         general={session.general}
         now={now}
         next={nextLabel}
+        plan={plan}
+        fixed={special}
         onChange={(general) => store.setMeta({ general })}
       />
 
@@ -186,7 +225,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
               <b>{pending.length} impulsion{pending.length > 1 ? 's' : ''} en attente</b>
               <span class="mono">{fmtClock(pending[0].t)} → choisir la ligne</span>
             </span>
-            {idle.length > 1 && running.length === 0 ? (
+            {!special && idle.length > 1 && running.length === 0 ? (
               <button class="q" onClick={massStart}>Tous partent</button>
             ) : (
               <button class="q" onClick={() => store.voidTap(pending[0].id)} aria-label="Supprimer l'impulsion">
@@ -204,10 +243,21 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
             <Icon name="check" />
           </div>
         ) : (
-          <p class="hint-line">
-            Touchez le <b>logo</b>, puis le bouton de l'athlète.
-            <span>Un nom pour corriger.</span>
-          </p>
+          awaitingTop ? (
+            <p class="hint-line top">
+              <b>{session.mode === 'mass' ? 'Mass start' : 'Poursuite'}</b> · touchez le logo pour le {session.mode === 'mass' ? 'départ de tous' : 'top départ'}
+              <span>
+                {session.mode === 'mass'
+                  ? `${session.athletes.length} athlètes partent ensemble`
+                  : `${session.athletes[0]?.name ?? ''} part en premier · départs automatiques`}
+              </span>
+            </p>
+          ) : (
+            <p class="hint-line">
+              Touchez le <b>logo</b>, puis le bouton de l'athlète.
+              <span>Un nom pour corriger.</span>
+            </p>
+          )
         )}
       </div>
 
@@ -221,8 +271,10 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
 
       <ul class={`rows n${kinds.length} ${results.length > 10 ? 'dense' : ''} ${pending.length ? 'armed' : ''}`}>
         {results.map((r) => {
-          const run = r.openStart !== undefined
-          const next = autoKind(r, splits)
+          const run = started(r)
+          const waiting = r.openStart !== undefined && r.openStart > now
+          // Mass start / poursuite : avant le top, c'est le logo qui donne le départ (pas les DÉP).
+          const next = awaitingTop ? null : autoKind(r, splits)
           const lastRun = r.runs[r.runs.length - 1]
           return (
             <li key={r.athlete.id} class={`${run ? 'running' : ''} ${r.athlete.withPrev ? 'with-prev' : ''} ${nextWave.has(r.athlete.id) ? 'next-wave' : ''}`}>
@@ -233,7 +285,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
                 <span class="n">{r.athlete.name}</span>
               </button>
               <span class="tm mono">
-                {run ? fmtDuration(now - r.openStart!) : lastRun ? fmtDuration(lastRun.time) : '—'}
+                {waiting ? <span class="wait">dans {waitLabel(r.openStart! - now)}</span> : run ? fmtDuration(now - r.openStart!) : lastRun ? fmtDuration(lastRun.time) : '—'}
                 {run && r.openSplits.length > 0 && (
                   <small>INT{r.openSplits.length} {fmtDuration(r.openSplits[r.openSplits.length - 1])}</small>
                 )}

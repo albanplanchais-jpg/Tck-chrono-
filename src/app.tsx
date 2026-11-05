@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import type { Course, Session } from './core/model'
 import { useSessionStore } from './store/useSession'
 import { Setup } from './screens/Setup'
@@ -18,6 +18,7 @@ import { Athletes } from './screens/Athletes'
 import { TabBar, type Tab } from './components/TabBar'
 import { useLicensees } from './ffck/store'
 import { AthleteHome } from './screens/AthleteHome'
+import { SessionHome } from './screens/SessionHome'
 
 /** /s/CODE → page athlète (sans compte). */
 const athleteCode = location.pathname.match(/^\/s\/([A-Za-z0-9]{6})\/?$/)?.[1]?.toUpperCase()
@@ -47,6 +48,8 @@ function CoachApp() {
   const [tab, setTab] = useState<Tab>('session')
   const [viewing, setViewing] = useState<Session | null>(null)
   const [startCourse, setStartCourse] = useState<Course | undefined>(undefined)
+  // Onglet Séance : accueil (gros bouton) puis préparation.
+  const [preparing, setPreparing] = useState(false)
   const s = store.session
 
   // Le groupe enregistré en base alimente « Mon groupe » sur le téléphone.
@@ -54,11 +57,21 @@ function CoachApp() {
   // Historique rechargé en ouvrant Historique / Profil, et après la fin d'une séance.
   useEffect(() => { if (tab !== 'session') data.refresh() }, [tab])
   // Le parcours choisi ne sert qu'à préparer la prochaine séance.
-  useEffect(() => { if (s && startCourse) setStartCourse(undefined) }, [s?.id])
+  // « Nouvelle séance » depuis les résultats : on va directement à la préparation.
+  const hadSession = useRef(!!s)
+  useEffect(() => {
+    if (s && startCourse) setStartCourse(undefined)
+    if (s) setPreparing(false)
+    else if (hadSession.current) setPreparing(true)
+    hadSession.current = !!s
+  }, [s?.id])
+  // Séance terminée : gardée sous la main (poursuite juste après) et historique rechargé,
+  // même si le coach enchaîne aussitôt sur une nouvelle séance.
+  const lastEnded = useRef<Session | undefined>(undefined)
+  if (s?.endedAt) lastEnded.current = s
   useEffect(() => {
     if (!s?.endedAt) return
-    const t = setTimeout(data.refresh, 1500)
-    return () => clearTimeout(t)
+    setTimeout(data.refresh, 1500)
   }, [s?.endedAt])
 
   if (!store.ready || loading) return <div class="screen" />
@@ -71,6 +84,7 @@ function CoachApp() {
   // Séances partagées : celles des autres coachs sont visibles en lecture seule.
   const isMine = (x: Session) => !x.coachId || x.coachId === user?.id
   const mine = data.sessions.filter(isMine)
+  const recentMine = lastEnded.current && !mine.some((x) => x.id === lastEnded.current!.id) ? [lastEnded.current, ...mine] : mine
   let screen
   if (viewing)
     screen = (
@@ -133,8 +147,19 @@ function CoachApp() {
   else
     screen = s ? (
       <Results store={store} session={s} />
+    ) : preparing || startCourse ? (
+      <Setup
+        key={startCourse?.id ?? 'free'}
+        store={store}
+        user={user}
+        courses={data.courses}
+        initialCourse={startCourse}
+        ffck={ffck}
+        sessions={recentMine}
+        onBack={() => { setPreparing(false); setStartCourse(undefined) }}
+      />
     ) : (
-      <Setup key={startCourse?.id ?? 'free'} store={store} user={user} courses={data.courses} initialCourse={startCourse} ffck={ffck} />
+      <SessionHome user={user} last={recentMine[0]} onNew={() => setPreparing(true)} onOpenLast={setViewing} onProfile={() => go('profile')} />
     )
 
   return (

@@ -24,8 +24,10 @@ Seuls les *taps* sont enregistrés ; tous les temps sont recalculés (`src/core/
 - **Licenciés FFCK** : autocomplétion sur la liste des licenciés (mise à jour chaque nuit, hors ligne, « Mon club » d'abord) — source, RGPD et procédure de suppression : [docs/FFCK.md](docs/FFCK.md).
 - **Partage** : les séances sont visibles par les comptes connectés (Historique → « Tous les coachs », lecture seule). **Comptes athlètes** : inscription libre, lien avec sa licence, « Mes résultats » et records par parcours.
 
+- **Modes de séance** : *Classique* (départs libres / vagues), *Mass start* (un toucher sur le logo fait partir tout le monde), *Poursuite* (à partir d'une séance passée : le plus lent part en premier, chacun avec son écart ; départs programmés automatiquement avec compte à rebours et bips ; classement à l'arrivée).
+
 ### Mise en place
-1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`, puis `0002_timekeepers.sql`, puis `0003_bibs.sql`, puis `0004_history_athletes.sql`, puis `0005_comment_general.sql`, puis `0006_courses.sql`, puis `0007_ffck_sharing.sql` (dans l'ordre). Valider ensuite chaque coach (voir docs/FFCK.md).
+1. Supabase → **SQL Editor** → coller et exécuter `supabase/migrations/0001_init.sql`, puis `0002_timekeepers.sql`, puis `0003_bibs.sql`, puis `0004_history_athletes.sql`, puis `0005_comment_general.sql`, puis `0006_courses.sql`, puis `0007_ffck_sharing.sql`, puis `0008_session_modes.sql` (dans l'ordre) — ou tout d'un coup avec `supabase/installation_complete.sql`. Valider ensuite chaque coach (voir docs/FFCK.md).
 2. Supabase → **Authentication → URL Configuration** : *Site URL* = l'URL Vercel (ex. `https://tck-chrono.vercel.app`), et l'ajouter aux *Redirect URLs*.
 3. Vercel → **Settings → Environment Variables** : `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (clé *anon/publishable*, jamais la *service_role*), puis redéployer.
 

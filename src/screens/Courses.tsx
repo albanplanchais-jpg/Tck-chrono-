@@ -139,7 +139,7 @@ function CoursePage({ course, st, busy, onClose, onStart, onEdit, onDelete, onOp
 
         <div class="sec-head"><h2>Meilleurs temps</h2><span class="label">{st.board.length} athlète{st.board.length > 1 ? 's' : ''}</span></div>
         {!st.board.length && <p class="muted">Lance une séance sur ce parcours pour remplir le classement.</p>}
-        <ol class="board">
+        <ol class="lboard">
           {st.board.map((e, i) => (
             <li key={e.athlete.id} class={i === 0 ? 'first' : ''}>
               <button onClick={() => onOpenSession(e.session)}>

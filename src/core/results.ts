@@ -67,6 +67,17 @@ export function autoKind(r: AthleteResult, splits = 0): Kind {
 /** Classement par meilleur temps ; ceux sans temps à la fin. */
 export function ranking(session: Session): Ranked[] {
   const all = computeAll(session)
+  // Poursuite : le classement se fait à l'ordre d'arrivée (premier qui franchit la ligne).
+  if (session.mode === 'pursuit') {
+    const arrived = all.filter((r) => r.runs.length).sort((a, b) => a.runs[0].finish - b.runs[0].finish)
+    const first = arrived[0]?.runs[0].finish
+    const ranked: Ranked[] = arrived.map((r) => ({
+      ...r,
+      rank: arrived.findIndex((x) => x.runs[0].finish === r.runs[0].finish) + 1,
+      gap: r.runs[0].finish - first!
+    }))
+    return [...ranked, ...all.filter((r) => !r.runs.length)]
+  }
   const timed = all.filter((r) => r.best !== undefined).sort((a, b) => a.best! - b.best!)
   const lead = timed[0]?.best
   // Ex aequo : même temps → même rang (1, 1, 3…).

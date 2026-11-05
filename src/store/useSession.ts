@@ -33,7 +33,14 @@ export function useSessionStore() {
   }, [])
 
   const start = useCallback(
-    (athletes: Athlete[], splits = 0, title = '', comment = '', courseId?: string) => {
+    (
+      athletes: Athlete[],
+      splits = 0,
+      title = '',
+      comment = '',
+      courseId?: string,
+      extra: Pick<Session, 'mode' | 'pursuit'> = {}
+    ) => {
       setLastSplits(splits)
       set('splits', splits)
       const clean = athletes.map(({ withPrev: _w, ...a }) => a)
@@ -46,6 +53,8 @@ export function useSessionStore() {
         ...(t ? { title: t } : {}),
         ...(comment.trim() ? { comment: comment.trim().slice(0, 500) } : {}),
         ...(courseId ? { courseId } : {}),
+        ...(extra.mode && extra.mode !== 'classic' ? { mode: extra.mode } : {}),
+        ...(extra.pursuit ? { pursuit: extra.pursuit } : {}),
         ...(cloudEnabled ? { code: newCode() } : {})
       })
     },
@@ -140,6 +149,12 @@ export function useSessionStore() {
     })
   }, [])
 
+  /** Plusieurs passages d'un coup (top départ d'un mass start ou d'une poursuite). */
+  const addAssignedMany = useCallback(
+    (items: { t: number; athleteId: string; kind: Kind }[]) => patchTaps((taps) => [...taps, ...items.map((it) => ({ id: uid(), ...it }))]),
+    [patchTaps]
+  )
+
   /** Enregistre directement un passage (bouton d'une ligne sans impulsion en attente). */
   const addAssigned = useCallback(
     (t: number, athleteId: string, kind: Kind) => patchTaps((taps) => [...taps, { id: uid(), t, athleteId, kind }]),
@@ -182,7 +197,7 @@ export function useSessionStore() {
     setSession(undefined)
   }, [session])
 
-  return { ready, session, roster, lastGroup, lastSplits, start, addTap, setMeta, mergeRoster, removeFromRoster, addToRoster, setAthletes, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
+  return { ready, session, roster, lastGroup, lastSplits, start, addTap, addAssignedMany, setMeta, mergeRoster, removeFromRoster, addToRoster, setAthletes, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
 }
 
 export type Store = ReturnType<typeof useSessionStore>

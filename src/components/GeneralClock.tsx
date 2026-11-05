@@ -19,6 +19,10 @@ interface Props {
   /** Prochaine vague à lancer (« 3 Emma + 10 Hugo »). */
   next?: string
   onChange: (g: Session['general']) => void
+  /** Départs programmés (poursuite) : compte à rebours jusqu'au prochain partant. */
+  plan?: { t: number; label: string }[]
+  /** Mass start / poursuite : le départ se donne avec le logo, pas d'intervalle. */
+  fixed?: boolean
 }
 
 /**
@@ -26,13 +30,15 @@ interface Props {
  * départ (ou avec ▶). Avec un intervalle, compte à rebours jusqu'au prochain
  * lancement + bips 3-2-1 et un bip long au top.
  */
-export function GeneralClock({ general, now, next, onChange }: Props) {
+export function GeneralClock({ general, now, next, onChange, plan, fixed }: Props) {
   const start = general?.start
   const interval = general?.interval ?? 0
   const running = start !== undefined
   const elapsed = running ? now - start! : 0
   const per = interval * 1000
-  const countdown = running && per ? per - (elapsed % per) : undefined
+  const upcoming = plan?.find((p) => p.t > now)
+  const countdown = running ? (plan ? (upcoming ? upcoming.t - now : undefined) : per ? per - (elapsed % per) : undefined) : undefined
+  if (plan) next = upcoming?.label
   const secLeft = countdown !== undefined ? Math.ceil(countdown / 1000) : undefined
   const [confirmStop, setConfirmStop] = useState(false)
   const [go, setGo] = useState(false)
@@ -75,12 +81,12 @@ export function GeneralClock({ general, now, next, onChange }: Props) {
         ) : running ? (
           next ? (<><small>Prochain</small><span class="solo">{next}</span></>) : null
         ) : (
-          <span class="g-hint">Démarre au 1<sup>er</sup> départ ou avec ▶</span>
+          <span class="g-hint">{fixed ? 'Touchez le logo pour le départ' : <>Démarre au 1<sup>er</sup> départ ou avec ▶</>}</span>
         )}
       </div>
-      <button class={`g-int ${interval ? 'set' : ''}`} onClick={cycle} aria-label="Intervalle entre les départs">
+      {!fixed && <button class={`g-int ${interval ? 'set' : ''}`} onClick={cycle} aria-label="Intervalle entre les départs">
         {interval ? (interval >= 60 ? `${interval / 60} min` : `${interval} s`) : 'Interv.'}
-      </button>
+      </button>}
       {running ? (
         <button
           class={`g-btn ${confirmStop ? 'warn' : ''}`}
@@ -89,7 +95,7 @@ export function GeneralClock({ general, now, next, onChange }: Props) {
         >
           {confirmStop ? '0 ?' : <Icon name="stop" size={16} stroke={2.6} />}
         </button>
-      ) : (
+      ) : fixed ? null : (
         <button class="g-btn play" aria-label="Lancer le chrono général" onClick={() => onChange({ ...general, start: now })}>
           <Icon name="play" size={16} stroke={2.4} />
         </button>

@@ -62,12 +62,13 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
     }
     const optional: Record<string, unknown> = {
       title: s.title ?? null, comment: s.comment ?? null, general: s.general ?? null, course_id: s.courseId ?? null,
-      coach_name: coachName.current
+      coach_name: coachName.current,
+      mode: s.mode ?? null, pursuit: s.pursuit ?? null
     }
     for (const [k, v] of Object.entries(optional)) if (!missing.current.has(k)) row[k] = v
     let { error } = await supabase.from('sessions').upsert(row)
     // Repli si une migration récente (0004 titre, 0005 commentaire / chrono général) n'est pas encore passée.
-    for (let i = 0; error && i < 5; i++) {
+    for (let i = 0; error && i < 8; i++) {
       const col = Object.keys(optional).find((k) => k in row && error!.message.includes(k))
       if (!col) break
       missing.current.add(col)

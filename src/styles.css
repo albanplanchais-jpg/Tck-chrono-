@@ -733,12 +733,12 @@ a.btn { text-decoration: none; color: inherit; }
 .c-rec small:first-child { font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .c-rec b { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
 .course > svg { color: var(--g4); }
-.board li { border-bottom: 1px solid var(--g3); }
-.board button { width: 100%; min-height: 62px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; text-align: left; }
-.board .rk { font-size: 28px; font-weight: 900; letter-spacing: -.03em; }
-.board li.first button { background: var(--white); color: var(--black); padding: 0 10px; margin: 0 -10px; width: calc(100% + 20px); }
-.board li.first small { color: #555; }
-.board li.first .bibn { background: var(--black); color: var(--white); }
+.lboard li { border-bottom: 1px solid var(--g3); }
+.lboard button { width: 100%; min-height: 62px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; text-align: left; }
+.lboard .rk { font-size: 28px; font-weight: 900; letter-spacing: -.03em; }
+.lboard li.first button { background: var(--white); color: var(--black); padding: 0 10px; margin: 0 -10px; width: calc(100% + 20px); }
+.lboard li.first small { color: #555; }
+.lboard li.first .bibn { background: var(--black); color: var(--white); }
 .g-time .gap { font-size: 11px; font-weight: 700; color: var(--g4); letter-spacing: 0; }
 .course-pick { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
 .course-pick .chips { padding: 0; gap: 6px; }
@@ -803,3 +803,37 @@ a.btn { text-decoration: none; color: inherit; }
 .lic-results li.lic-sep::before { content: 'Autres clubs'; display: block; padding: 6px 12px 0; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--g4); }
 .waves.simple ul li { grid-template-columns: 58px minmax(0, 1fr) 36px; }
 .waves.simple ul li > span:empty { display: none; }
+
+/* ——— Accueil Séance ——— */
+.home { justify-content: space-between; }
+.home-head { display: flex; justify-content: space-between; align-items: center; }
+.home-avatar { width: 52px; height: 52px; border: 2px solid var(--white); display: grid; place-items: center; font-size: 18px; font-weight: 900; }
+.home-center { flex: 1; min-height: 0; display: grid; place-items: center; container-type: size; padding: 12px var(--pad); }
+.home-ring { width: min(86cqw, 86cqh, 420px); aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--g3); display: grid; place-items: center; }
+.home-btn { width: 86%; aspect-ratio: 1; border-radius: 50%; background: var(--white); color: var(--black); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-shadow: inset 0 0 0 4px var(--black), 0 0 0 1px var(--white); transition: transform 100ms ease-out; }
+.home-btn:active { transform: scale(.95); }
+.home-btn span { font-size: clamp(22px, 7cqmin, 34px); font-weight: 900; text-transform: uppercase; letter-spacing: .02em; line-height: 1.05; max-width: 70%; text-align: center; }
+.home-last { align-self: center; display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 12px; margin-bottom: 12px; }
+.home-last span { font-size: 16px; font-weight: 700; color: var(--g4); }
+.home-last b { font-size: 18px; font-weight: 800; }
+.home-last svg { color: var(--g4); }
+
+/* ——— Modes de séance ——— */
+.mode-pick { margin-top: 14px; }
+.mode-pick button { height: 48px; font-size: 13px; letter-spacing: .04em; }
+.mode-help { margin: 8px 0 0; font-size: 13px; line-height: 1.45; color: var(--g4); }
+.setup .back { margin-bottom: 4px; }
+.pursuit { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.src-pick { padding: 0; gap: 6px; }
+.src-pick .chip { height: 42px; font-size: 14px; }
+.plan li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto 36px; align-items: center; gap: 8px; min-height: 54px; border-bottom: 1px solid var(--g3); }
+.plan .idx { color: var(--g4); font-size: 13px; font-weight: 700; }
+.p-name { display: flex; flex-direction: column; min-width: 0; }
+.p-name b { display: flex; align-items: center; font-size: 17px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-name small { font-size: 11px; color: var(--g4); }
+.p-off { font-size: 17px; font-weight: 800; }
+.plan .rm { width: 36px; height: 36px; margin: 0; }
+.rows .wait { font-family: var(--font); font-size: 13px; font-weight: 800; color: var(--white); border: 1.5px dashed var(--g4); padding: 2px 6px; border-radius: 6px; white-space: nowrap; }
+.hint-line.top { color: #ddd; }
+.hint-line.top b { color: var(--white); text-transform: uppercase; letter-spacing: .04em; }
+.res-mode { margin: 6px 0 0; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--g4); }
