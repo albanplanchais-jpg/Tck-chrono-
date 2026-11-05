@@ -18,6 +18,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
   const [bib, setBib] = useState('')
   const [hint, setHint] = useState(isIOS && !standalone)
   const [splits, setSplits] = useState(store.lastSplits)
+  const [title, setTitle] = useState('')
 
   const has = (n: string) => list.some((a) => a.name.toLowerCase() === n.trim().toLowerCase())
   const add = (a: Athlete) => !has(a.name) && setList((l) => [...l, { ...a, withPrev: undefined }])
@@ -57,6 +58,11 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
             <button class="rm" onClick={() => setHint(false)} aria-label="Fermer"><Icon name="x" size={18} /></button>
           </div>
         )}
+
+        <label class="title-in">
+          <span class="label">Nom de la séance · facultatif</span>
+          <input value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} placeholder="Bassin · 6 × 1 min" maxLength={80} />
+        </label>
 
         <form onSubmit={submit} style={{ marginTop: 14 }}>
           <label class="label" for="nm">Ajouter un athlète · nom et dossard</label>
@@ -104,7 +110,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
 
         {recents.length > 0 && (
           <section class="recents">
-            <span class="label">Récents</span>
+            <span class="label">Mon groupe</span>
             <div class="chips">
               {recents.map((a) => (
                 <button key={a.id} class="chip" onClick={() => add(a)}><Icon name="plus" size={18} stroke={2.6} />{label(a)}</button>
@@ -125,7 +131,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
             ))}
           </div>
         </div>
-        <button class="btn primary" disabled={!list.length && !cloudEnabled} onClick={() => store.start(list, splits)}>Démarrer la séance</button>
+        <button class="btn primary" disabled={!list.length && !cloudEnabled} onClick={() => store.start(list, splits, title)}>Démarrer la séance</button>
       </footer>
     </div>
   )

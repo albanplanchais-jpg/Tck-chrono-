@@ -7,7 +7,8 @@ import { exportXlsx, shareWhatsApp } from '../device/share'
 import { Icon } from '../components/Icon'
 import { TapLog } from '../components/TapLog'
 
-export function Results({ store, session }: { store: Store; session: Session }) {
+/** Résultats d'une séance. Sans `store` : séance passée, consultée depuis l'historique (lecture seule). */
+export function Results({ store, session, onBack }: { store?: Store; session: Session; onBack?: () => void }) {
   const rows = useMemo(() => ranking(session), [session])
   const [open, setOpen] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
@@ -30,14 +31,19 @@ export function Results({ store, session }: { store: Store; session: Session }) 
     <div class="screen results">
       <header class="px" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <span class="label">Séance terminée</span>
-          <h1>Résultats</h1>
-          <span class="res-sub">{fmtDay(session.createdAt)} · {fmtHM(session.createdAt)} – {fmtHM(session.endedAt!)}</span>
+          {onBack && (
+            <button class="back" onClick={onBack}><Icon name="left" size={18} stroke={2.6} />Historique</button>
+          )}
+          <span class="label">{session.endedAt ? 'Séance terminée' : 'Séance en cours'}</span>
+          <h1>{session.title || 'Résultats'}</h1>
+          <span class="res-sub">{fmtDay(session.createdAt)} · {fmtHM(session.createdAt)}{session.endedAt ? ` – ${fmtHM(session.endedAt)}` : ''}</span>
         </div>
-        <div class="res-actions">
-          <button class="link" onClick={() => setLog(true)}>Corriger</button>
-          <button class="link" onClick={store.resume}>Reprendre</button>
-        </div>
+        {store && (
+          <div class="res-actions">
+            <button class="link" onClick={() => setLog(true)}>Corriger</button>
+            <button class="link" onClick={store.resume}>Reprendre</button>
+          </div>
+        )}
       </header>
 
       <div class="cols label" style={{ fontSize: 12 }}>
@@ -89,7 +95,7 @@ export function Results({ store, session }: { store: Store; session: Session }) 
         })}
       </ol>
 
-      {log && <TapLog store={store} session={session} onClose={() => setLog(false)} />}
+      {log && store && <TapLog store={store} session={session} onClose={() => setLog(false)} />}
 
       <footer class="bottom bar">
         {msg && <p class="toast-msg" style={{ margin: 0 }}>{msg}</p>}
@@ -97,7 +103,7 @@ export function Results({ store, session }: { store: Store; session: Session }) 
           <button class="btn primary" onClick={() => shareWhatsApp(session)}><Icon name="chat" size={22} />WhatsApp</button>
           <button class="btn primary" onClick={excel}><Icon name="sheet" size={22} />Excel</button>
         </div>
-        <button class="btn outline" onClick={store.reset}>Nouvelle séance</button>
+        {store && <button class="btn outline" onClick={store.reset}>Nouvelle séance</button>}
       </footer>
     </div>
   )

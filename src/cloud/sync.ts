@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { Athlete, Session, Tap } from '../core/model'
 import { syncClock } from './clock'
+import { saveAthletes } from './history'
 import { supabase } from './supabase'
 
 export type SyncState = 'off' | 'ok' | 'pending' | 'offline' | 'error'
@@ -19,6 +20,8 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
   const [state, setState] = useState<SyncState>('off')
   const latest = useRef(session)
   const dirty = useRef(false)
+  const noTitle = useRef(false)
+  const athletesKey = useRef('')
   const timer = useRef<number | undefined>(undefined)
   latest.current = session
   const cb = useRef(handlers)
@@ -38,7 +41,7 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
     if (!supabase || !s?.code || !dirty.current) return
     if (!navigator.onLine) return setState('offline')
     dirty.current = false
-    const { error } = await supabase.from('sessions').upsert({
+    const row: Record<string, unknown> = {
       id: s.id,
       code: s.code,
       created_at: new Date(s.createdAt).toISOString(),
@@ -47,7 +50,18 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
       athletes: s.athletes,
       taps: s.taps,
       updated_at: new Date().toISOString()
-    })
+    }
+    if (!noTitle.current) row.title = s.title ?? null
+    let { error } = await supabase.from('sessions').upsert(row)
+    // Repli si la migration 0004 (colonne title) n'est pas encore passée.
+    if (error && /title/.test(error.message)) {
+      noTitle.current = true
+      delete row.title
+      ;({ error } = await supabase.from('sessions').upsert(row))
+    }
+    // Les athlètes de la séance rejoignent le groupe du coach (table athletes).
+    const key = JSON.stringify(s.athletes.map((a) => [a.id, a.name, a.bib]))
+    if (!error && key !== athletesKey.current && (await saveAthletes(s.athletes))) athletesKey.current = key
     if (error) {
       dirty.current = true
       setState(navigator.onLine ? 'error' : 'offline')

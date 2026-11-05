@@ -1,8 +1,11 @@
+import { getSettings } from '../store/settings'
+
 let ctx: AudioContext | undefined
 
 export function tapFeedback() {
-  try { navigator.vibrate?.(25) } catch {}
-  try {
+  const { vibrate, beep } = getSettings()
+  if (vibrate) try { navigator.vibrate?.(25) } catch {}
+  if (beep) try {
     ctx ??= new AudioContext()
     const o = ctx.createOscillator()
     const g = ctx.createGain()

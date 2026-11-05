@@ -64,15 +64,12 @@ const fileName = (s: Session) => {
   return `chrono-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}h${p(d.getMinutes())}.xlsx`
 }
 
-/** Fichier Excel : partage (WhatsApp, mail, Fichiers…) sur téléphone, sinon téléchargement. */
-export async function exportXlsx(s: Session): Promise<'shared' | 'downloaded'> {
-  const { buildXlsx } = await import('./xlsx')
-  const bytes = buildXlsx(resultsSheets(s))
+async function shareOrDownload(bytes: Uint8Array, name: string, title: string): Promise<'shared' | 'downloaded'> {
   const type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  const file = new File([bytes as BlobPart], fileName(s), { type })
+  const file = new File([bytes as BlobPart], name, { type })
   try {
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'Résultats TCK Chrono' })
+      await navigator.share({ files: [file], title })
       return 'shared'
     }
   } catch (e) {
@@ -85,4 +82,45 @@ export async function exportXlsx(s: Session): Promise<'shared' | 'downloaded'> {
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
   return 'downloaded'
+}
+
+/** Fichier Excel : partage (WhatsApp, mail, Fichiers…) sur téléphone, sinon téléchargement. */
+export async function exportXlsx(s: Session): Promise<'shared' | 'downloaded'> {
+  const { buildXlsx } = await import('./xlsx')
+  return shareOrDownload(buildXlsx(resultsSheets(s)), fileName(s), 'Résultats TCK Chrono')
+}
+
+/** Toutes les séances du coach dans un seul classeur. */
+export async function exportAllXlsx(sessions: Session[]): Promise<'shared' | 'downloaded'> {
+  const { buildXlsx } = await import('./xlsx')
+  const maxSplits = Math.max(0, ...sessions.map((s) => s.splits ?? 0))
+  const inter = Array.from({ length: maxSplits }, (_, i) => `Inter ${i + 1}`)
+  const day = (t: number) => new Date(t).toLocaleDateString('fr-FR')
+  const hm = (t: number) => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const list: Cell[][] = [['Date', 'Heure', 'Séance', 'Athlètes', 'Passages', 'Meilleur temps', 'Meilleur athlète']]
+  const runs: Cell[][] = [['Date', 'Séance', 'Dossard', 'Athlète', 'Passage', ...inter, 'Temps', 'Temps (s)', 'Meilleur de la séance']]
+  for (const s of [...sessions].sort((a, b) => a.createdAt - b.createdAt)) {
+    const rank = ranking(s)
+    const title = s.title || `Séance ${hm(s.createdAt)}`
+    const top = rank[0]?.best !== undefined ? rank[0] : undefined
+    list.push([day(s.createdAt), hm(s.createdAt), title, rank.filter((r) => r.runs.length).length, rank.reduce((n, r) => n + r.runs.length, 0), top ? fmtDuration(top.best!, 2) : null, top?.athlete.name ?? null])
+    for (const r of rank)
+      r.runs.forEach((run, i) =>
+        runs.push([
+          day(s.createdAt), title, r.athlete.bib ?? null, r.athlete.name, i + 1,
+          ...inter.map((_, j) => (run.splits[j] !== undefined ? fmtDuration(run.splits[j], 2) : null)),
+          fmtDuration(run.time, 2), sec(run.time), run.time === r.best ? 'oui' : null
+        ])
+      )
+  }
+  const d = new Date()
+  const name = `chrono-toutes-seances-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.xlsx`
+  return shareOrDownload(
+    buildXlsx([
+      { name: 'Séances', rows: list, widths: [12, 8, 26, 10, 10, 15, 18] },
+      { name: 'Passages', rows: runs, widths: [12, 26, 9, 20, 9, ...inter.map(() => 12), 12, 11, 12] }
+    ]),
+    name,
+    'Toutes mes séances TCK Chrono'
+  )
 }

@@ -28,6 +28,8 @@ export interface Session {
   taps: Tap[]
   /** Nombre de chronos intermédiaires attendus par passage (0 = aucun). */
   splits?: number
+  /** Titre libre (ex. « Bassin · 6 × 1 min »). */
+  title?: string
   /** Code à 6 caractères du lien athlète (séance synchronisée en ligne). */
   code?: string
   /** Version déjà intégrée de chaque tap de chronométreur (id → updated_at). */

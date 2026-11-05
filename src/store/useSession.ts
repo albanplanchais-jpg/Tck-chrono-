@@ -9,6 +9,8 @@ export function useSessionStore() {
   const [session, setSession] = useState<Session | undefined>()
   const [roster, setRoster] = useState<Athlete[]>([])
   const [lastSplits, setLastSplits] = useState(0)
+  const rosterRef = useRef<Athlete[]>([])
+  rosterRef.current = roster
   const loaded = useRef(false)
 
   useEffect(() => {
@@ -31,15 +33,19 @@ export function useSessionStore() {
   }, [])
 
   const start = useCallback(
-    (athletes: Athlete[], splits = 0) => {
+    (athletes: Athlete[], splits = 0, title = '') => {
       setLastSplits(splits)
       set('splits', splits)
-      const byName = new Map(roster.map((a) => [a.name.toLowerCase(), a]))
-      athletes.forEach((a) => byName.set(a.name.toLowerCase(), a))
-      const next = [...athletes, ...roster.filter((a) => !athletes.some((x) => x.name.toLowerCase() === a.name.toLowerCase()))].slice(0, 60)
+      const clean = athletes.map(({ withPrev: _w, ...a }) => a)
+      const next = [...clean, ...roster.filter((a) => !athletes.some((x) => x.name.toLowerCase() === a.name.toLowerCase()))].slice(0, 200)
       setRoster(next)
       saveRoster(next)
-      setSession({ id: uid(), createdAt: Date.now(), athletes, taps: [], splits, ...(cloudEnabled ? { code: newCode() } : {}) })
+      const t = title.trim().slice(0, 80)
+      setSession({
+        id: uid(), createdAt: Date.now(), athletes, taps: [], splits,
+        ...(t ? { title: t } : {}),
+        ...(cloudEnabled ? { code: newCode() } : {})
+      })
     },
     [roster]
   )
@@ -53,6 +59,32 @@ export function useSessionStore() {
     [patchTaps]
   )
 
+  /** Groupe du coach chargé depuis la base : il fait foi, les athlètes locaux en plus sont gardés. */
+  const mergeRoster = useCallback((cloud: Athlete[]) => {
+    setRoster((r) => {
+      const names = new Set(cloud.map((a) => a.name.toLowerCase()))
+      const next = [...cloud, ...r.filter((a) => !names.has(a.name.toLowerCase()) && !cloud.some((c) => c.id === a.id))]
+      saveRoster(next)
+      return next
+    })
+  }, [])
+
+  const removeFromRoster = useCallback((id: string) => {
+    setRoster((r) => {
+      const next = r.filter((a) => a.id !== id)
+      saveRoster(next)
+      return next
+    })
+  }, [])
+
+  const addToRoster = useCallback((a: Athlete) => {
+    setRoster((r) => {
+      const next = [a, ...r.filter((x) => x.id !== a.id && x.name.toLowerCase() !== a.name.toLowerCase())]
+      saveRoster(next)
+      return next
+    })
+  }, [])
+
   /** Nouvel ordre de départ / dossards pendant la séance. */
   const setAthletes = useCallback((athletes: Athlete[]) => setSession((s) => (s ? { ...s, athletes } : s)), [])
 
@@ -62,7 +94,13 @@ export function useSessionStore() {
       if (!s) return s
       const byName = new Map(list.map((a) => [a.name.toLowerCase(), a]))
       const known = new Set(s.athletes.map((a) => a.name.toLowerCase()))
-      const fresh = list.filter((a) => !known.has(a.name.toLowerCase()))
+      // Un athlète déjà dans le groupe garde son identifiant (historique continu).
+      const fresh = list
+        .filter((a) => !known.has(a.name.toLowerCase()))
+        .map((a) => {
+          const g = rosterRef.current.find((x) => x.name.toLowerCase() === a.name.toLowerCase())
+          return g ? { ...g, ...(a.bib !== undefined ? { bib: a.bib } : {}) } : a
+        })
       // Dossard donné par l'athlète : complète un athlète déjà inscrit par le coach sans dossard.
       let changed = false
       const athletes = s.athletes.map((a) => {
@@ -136,7 +174,7 @@ export function useSessionStore() {
     setSession(undefined)
   }, [session])
 
-  return { ready, session, roster, lastGroup, lastSplits, start, addTap, setAthletes, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
+  return { ready, session, roster, lastGroup, lastSplits, start, addTap, mergeRoster, removeFromRoster, addToRoster, setAthletes, addAthletes, mergeRemote, addAssigned, assignMany, restore, voidTap, end, resume, reset }
 }
 
 export type Store = ReturnType<typeof useSessionStore>
