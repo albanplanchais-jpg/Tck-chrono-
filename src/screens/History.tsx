@@ -1,10 +1,11 @@
 import { useMemo } from 'preact/hooks'
-import type { Session } from '../core/model'
+import type { Course, Session } from '../core/model'
 import { summarize } from '../core/stats'
 import { SessionItem } from '../components/SessionItem'
 import { Icon } from '../components/Icon'
 
 interface Props {
+  courses?: Course[]
   sessions: Session[]
   loading: boolean
   source: 'cloud' | 'local'
@@ -13,7 +14,7 @@ interface Props {
 }
 
 /** Toutes les séances du coach, de la plus récente à la plus ancienne, regroupées par mois. */
-export function History({ sessions, loading, source, onOpen, onRefresh }: Props) {
+export function History({ courses = [], sessions, loading, source, onOpen, onRefresh }: Props) {
   const months = useMemo(() => {
     const out: { label: string; items: ReturnType<typeof summarize>[] }[] = []
     for (const s of sessions) {
@@ -52,7 +53,7 @@ export function History({ sessions, loading, source, onOpen, onRefresh }: Props)
             <section key={m.label} class="month">
               <div class="sec-head"><h2>{m.label}</h2><span class="label">{m.items.length} séance{m.items.length > 1 ? 's' : ''}</span></div>
               <ul class="sess-list">
-                {m.items.map((sum) => <SessionItem key={sum.session.id} sum={sum} onOpen={() => onOpen(sum.session)} />)}
+                {m.items.map((sum) => <SessionItem key={sum.session.id} sum={sum} course={courses.find((c) => c.id === sum.session.courseId)?.name} onOpen={() => onOpen(sum.session)} />)}
               </ul>
             </section>
           ))

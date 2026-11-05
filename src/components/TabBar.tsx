@@ -1,10 +1,12 @@
 import { Icon } from './Icon'
 
-export type Tab = 'session' | 'history' | 'profile'
+export type Tab = 'session' | 'courses' | 'history' | 'athletes' | 'profile'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'session', label: 'Séance', icon: 'stopwatch' },
+  { id: 'courses', label: 'Parcours', icon: 'flag' },
   { id: 'history', label: 'Historique', icon: 'list' },
+  { id: 'athletes', label: 'Athlètes', icon: 'users' },
   { id: 'profile', label: 'Profil', icon: 'user' }
 ]
 

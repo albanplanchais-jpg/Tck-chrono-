@@ -37,3 +37,33 @@ describe('stats', () => {
     expect(fmtDuration(61890)).toBe('01:01.89')
   })
 })
+
+import { athleteCourseBests, courseStats } from '../src/core/stats'
+
+describe('parcours', () => {
+  const mk = (id: string, created: number, course: string | undefined, times: [string, string, number][]): Session => ({
+    id, createdAt: created, courseId: course,
+    athletes: times.map(([aid, name]) => ({ id: aid, name })),
+    taps: times.flatMap(([aid, , t], i) => [
+      { id: `${id}${i}s`, t: 0, athleteId: aid, kind: 'start' as const },
+      { id: `${id}${i}f`, t, athleteId: aid, kind: 'finish' as const }
+    ])
+  })
+  const sessions = [
+    mk('x1', 1, 'bassin', [['a', 'Emma', 62000], ['b', 'Lucas', 61000]]),
+    mk('x2', 2, 'bassin', [['a2', 'emma', 60500]]),
+    mk('x3', 3, 'riviere', [['a', 'Emma', 250000]]),
+    mk('x4', 4, undefined, [['a', 'Emma', 1000]])
+  ]
+  it('classement et record du parcours (même athlète par nom)', () => {
+    const st = courseStats('bassin', sessions, [{ id: 'a', name: 'Emma' }])
+    expect(st.sessions.map((s) => s.id)).toEqual(['x2', 'x1'])
+    expect(st.board.map((e) => [e.athlete.name, e.best])).toEqual([['Emma', 60500], ['Lucas', 61000]])
+    expect(st.record?.session.id).toBe('x2')
+    expect(st.board[0].runs).toBe(2)
+  })
+  it('records d’un athlète par parcours', () => {
+    const r = athleteCourseBests({ id: 'a', name: 'Emma' }, [{ id: 'bassin', name: 'Bassin' }, { id: 'riviere', name: 'Rivière' }, { id: 'vide', name: 'Vide' }], sessions)
+    expect(r.map((x) => [x.course.name, x.best, x.rank, x.of])).toEqual([['Bassin', 60500, 1, 2], ['Rivière', 250000, 1, 1]])
+  })
+})

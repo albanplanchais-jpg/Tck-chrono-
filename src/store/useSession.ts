@@ -33,7 +33,7 @@ export function useSessionStore() {
   }, [])
 
   const start = useCallback(
-    (athletes: Athlete[], splits = 0, title = '', comment = '') => {
+    (athletes: Athlete[], splits = 0, title = '', comment = '', courseId?: string) => {
       setLastSplits(splits)
       set('splits', splits)
       const clean = athletes.map(({ withPrev: _w, ...a }) => a)
@@ -45,6 +45,7 @@ export function useSessionStore() {
         id: uid(), createdAt: Date.now(), athletes, taps: [], splits,
         ...(t ? { title: t } : {}),
         ...(comment.trim() ? { comment: comment.trim().slice(0, 500) } : {}),
+        ...(courseId ? { courseId } : {}),
         ...(cloudEnabled ? { code: newCode() } : {})
       })
     },

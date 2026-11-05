@@ -1,5 +1,5 @@
-import { useState } from 'preact/hooks'
-import { uid, type Athlete } from '../core/model'
+import { useEffect, useState } from 'preact/hooks'
+import { uid, type Athlete, type Course } from '../core/model'
 import { fmtDay } from '../core/format'
 import type { Store } from '../store/useSession'
 import { Icon } from '../components/Icon'
@@ -12,7 +12,13 @@ import { signOut } from '../cloud/auth'
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
 
-export function Setup({ store, user }: { store: Store; user?: User | null }) {
+export function Setup({ store, user, courses = [], initialCourse }: {
+  store: Store
+  user?: User | null
+  courses?: Course[]
+  /** Parcours choisi depuis l'onglet Parcours (« Nouvelle séance sur ce parcours »). */
+  initialCourse?: Course
+}) {
   const [list, setList] = useState<Athlete[]>(store.lastGroup)
   const [name, setName] = useState('')
   const [bib, setBib] = useState('')
@@ -20,6 +26,20 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
   const [splits, setSplits] = useState(store.lastSplits)
   const [title, setTitle] = useState('')
   const [comment, setComment] = useState('')
+  const [courseId, setCourseId] = useState<string | undefined>(initialCourse?.id)
+  useEffect(() => {
+    if (!initialCourse) return
+    setCourseId(initialCourse.id)
+    setTitle((t) => t || initialCourse.name)
+    setSplits(initialCourse.splits ?? 0)
+  }, [initialCourse?.id])
+  const pickCourse = (c?: Course) => {
+    const prev = courses.find((x) => x.id === courseId)
+    setCourseId(c?.id)
+    // Le nom de la séance suit le parcours tant qu'il n'a pas été changé à la main.
+    setTitle((t) => (!t || t === prev?.name ? c?.name ?? '' : t))
+    if (c) setSplits(c.splits ?? 0)
+  }
 
   const has = (n: string) => list.some((a) => a.name.toLowerCase() === n.trim().toLowerCase())
   const add = (a: Athlete) => !has(a.name) && setList((l) => [...l, { ...a, withPrev: undefined }])
@@ -57,6 +77,20 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
           <div class="banner">
             <span>Pour installer l'app : <b>Partager</b> → <b>Sur l'écran d'accueil</b>.</span>
             <button class="rm" onClick={() => setHint(false)} aria-label="Fermer"><Icon name="x" size={18} /></button>
+          </div>
+        )}
+
+        {courses.length > 0 && (
+          <div class="course-pick">
+            <span class="label">Parcours</span>
+            <div class="chips">
+              <button class={`chip ${!courseId ? 'on' : ''}`} onClick={() => pickCourse(undefined)}>Libre</button>
+              {courses.map((c) => (
+                <button key={c.id} class={`chip ${courseId === c.id ? 'on' : ''}`} aria-pressed={courseId === c.id} onClick={() => pickCourse(c)}>
+                  <Icon name="flag" size={14} stroke={2.4} />{c.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -136,7 +170,7 @@ export function Setup({ store, user }: { store: Store; user?: User | null }) {
             ))}
           </div>
         </div>
-        <button class="btn primary" disabled={!list.length && !cloudEnabled} onClick={() => store.start(list, splits, title, comment)}>Démarrer la séance</button>
+        <button class="btn primary" disabled={!list.length && !cloudEnabled} onClick={() => store.start(list, splits, title, comment, courseId)}>Démarrer la séance</button>
       </footer>
     </div>
   )

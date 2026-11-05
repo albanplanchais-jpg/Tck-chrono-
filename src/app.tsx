@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
-import type { Session } from './core/model'
+import type { Course, Session } from './core/model'
 import { useSessionStore } from './store/useSession'
 import { Setup } from './screens/Setup'
 import { Timer } from './screens/Timer'
@@ -13,6 +13,8 @@ import { useCloudSync } from './cloud/sync'
 import { updateSessionMeta, useCoachData } from './cloud/history'
 import { History } from './screens/History'
 import { Profile } from './screens/Profile'
+import { Courses } from './screens/Courses'
+import { Athletes } from './screens/Athletes'
 import { TabBar, type Tab } from './components/TabBar'
 
 /** /s/CODE → page athlète (sans compte). */
@@ -33,12 +35,15 @@ function CoachApp() {
   const data = useCoachData(online)
   const [tab, setTab] = useState<Tab>('session')
   const [viewing, setViewing] = useState<Session | null>(null)
+  const [startCourse, setStartCourse] = useState<Course | undefined>(undefined)
   const s = store.session
 
   // Le groupe enregistré en base alimente « Mon groupe » sur le téléphone.
   useEffect(() => { if (data.group) store.mergeRoster(data.group) }, [data.group])
   // Historique rechargé en ouvrant Historique / Profil, et après la fin d'une séance.
   useEffect(() => { if (tab !== 'session') data.refresh() }, [tab])
+  // Le parcours choisi ne sert qu'à préparer la prochaine séance.
+  useEffect(() => { if (s && startCourse) setStartCourse(undefined) }, [s?.id])
   useEffect(() => {
     if (!s?.endedAt) return
     const t = setTimeout(data.refresh, 1500)
@@ -66,26 +71,58 @@ function CoachApp() {
       />
     )
   else if (tab === 'history')
-    screen = <History sessions={data.sessions} loading={data.loading} source={data.source} onOpen={setViewing} onRefresh={data.refresh} />
+    screen = <History courses={data.courses} sessions={data.sessions} loading={data.loading} source={data.source} onOpen={setViewing} onRefresh={data.refresh} />
+  else if (tab === 'courses')
+    screen = (
+      <Courses
+        courses={data.courses}
+        sessions={data.sessions}
+        group={store.roster}
+        busy={!!s && !s.endedAt}
+        onSave={data.upsertCourse}
+        onDelete={data.deleteCourse}
+        onOpenSession={setViewing}
+        onStartOn={(c) => {
+          // Séance terminée affichée : on la ferme pour préparer la nouvelle.
+          if (s?.endedAt) store.reset()
+          setStartCourse(c)
+          go('session')
+        }}
+      />
+    )
+  else if (tab === 'athletes')
+    screen = (
+      <Athletes
+        group={store.roster}
+        sessions={data.sessions}
+        courses={data.courses}
+        onAddAthlete={store.addToRoster}
+        onRemoveAthlete={store.removeFromRoster}
+        onOpenSession={setViewing}
+      />
+    )
   else if (tab === 'profile')
     screen = (
       <Profile
         user={user}
         group={store.roster}
         sessions={data.sessions}
-        onAddAthlete={store.addToRoster}
-        onRemoveAthlete={store.removeFromRoster}
         onOpenSession={setViewing}
         onAllSessions={() => go('history')}
         onProfileSaved={data.refresh}
       />
     )
-  else screen = s ? <Results store={store} session={s} /> : <Setup store={store} user={user} />
+  else
+    screen = s ? (
+      <Results store={store} session={s} />
+    ) : (
+      <Setup key={startCourse?.id ?? 'free'} store={store} user={user} courses={data.courses} initialCourse={startCourse} />
+    )
 
   return (
     <div class="shell">
       {screen}
-      <TabBar tab={viewing ? (tab === 'session' ? 'history' : tab) : tab} onChange={go} />
+      <TabBar tab={viewing && tab === 'session' ? 'history' : tab} onChange={go} />
     </div>
   )
 }

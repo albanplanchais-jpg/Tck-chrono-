@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'preact/hooks'
 import type { User } from '@supabase/supabase-js'
-import { uid, type Athlete, type Session } from '../core/model'
-import { athleteStats, summarize, totals, type AthleteStats } from '../core/stats'
-import { fmtDay, fmtDuration } from '../core/format'
-import { label, parseBib } from '../core/startOrder'
+import type { Athlete, Session } from '../core/model'
+import { summarize, totals } from '../core/stats'
 import { useSettings } from '../store/settings'
-import { archiveAthlete, saveAthletes, updateProfile } from '../cloud/history'
+import { updateProfile } from '../cloud/history'
 import { signOut } from '../cloud/auth'
 import { frError } from '../cloud/supabase'
 import { exportAllXlsx } from '../device/share'
@@ -16,8 +14,6 @@ interface Props {
   user: User | null
   group: Athlete[]
   sessions: Session[]
-  onAddAthlete: (a: Athlete) => void
-  onRemoveAthlete: (id: string) => void
   onOpenSession: (s: Session) => void
   onAllSessions: () => void
   onProfileSaved: () => void
@@ -36,33 +32,15 @@ function Toggle({ on, onChange, title, sub }: { on: boolean; onChange: (v: boole
 }
 
 /** Profil du coach : statistiques, groupe d'athlètes, dernières séances et réglages. */
-export function Profile({ user, group, sessions, onAddAthlete, onRemoveAthlete, onOpenSession, onAllSessions, onProfileSaved }: Props) {
+export function Profile({ user, group, sessions, onOpenSession, onAllSessions, onProfileSaved }: Props) {
   const [settings, set] = useSettings()
-  const [adding, setAdding] = useState(false)
-  const [name, setName] = useState('')
-  const [bib, setBib] = useState('')
-  const [open, setOpen] = useState<AthleteStats | null>(null)
   const [editing, setEditing] = useState(false)
   const [msg, setMsg] = useState('')
 
   const meta = (user?.user_metadata ?? {}) as { name?: string; discipline?: string; club?: string }
   const coachName = meta.name || user?.email || 'Coach'
-  const stats = useMemo(() => athleteStats(group, sessions), [group, sessions])
   const tot = useMemo(() => totals(sessions, group), [sessions, group])
   const recent = useMemo(() => sessions.slice(0, 3).map(summarize), [sessions])
-
-  const add = async (e: Event) => {
-    e.preventDefault()
-    const n = name.trim()
-    if (!n) return
-    const b = parseBib(bib)
-    const a: Athlete = { id: uid(), name: n, ...(b !== undefined ? { bib: b } : {}) }
-    onAddAthlete(a)
-    saveAthletes([a])
-    setName('')
-    setBib('')
-    setAdding(false)
-  }
 
   const exportAll = async () => {
     if (!sessions.length) return setMsg('Aucune séance à exporter.')
@@ -100,35 +78,6 @@ export function Profile({ user, group, sessions, onAddAthlete, onRemoveAthlete, 
         </div>
 
         <section class="px block">
-          <div class="sec-head"><h2>Mon groupe</h2><span class="label">Meilleur temps</span></div>
-          {stats.length === 0 && <p class="muted">Aucun athlète pour l'instant. Ajoute-les ici ou lors d'une séance.</p>}
-          <ul class="group">
-            {stats.map((st, i) => (
-              <li key={st.athlete.id}>
-                <button onClick={() => setOpen(st)}>
-                  <span class="idx mono">{String(i + 1).padStart(2, '0')}</span>
-                  <span class="g-name">
-                    <b>{st.athlete.bib !== undefined && <span class="bibn mono">{st.athlete.bib}</span>}{st.athlete.name}</b>
-                    <small>{st.sessions} séance{st.sessions > 1 ? 's' : ''}</small>
-                  </span>
-                  <span class="mono g-time">{st.best !== undefined ? fmtDuration(st.best) : '—'}</span>
-                  <Icon name="right" size={18} />
-                </button>
-              </li>
-            ))}
-          </ul>
-          {adding ? (
-            <form class="field add-ath" onSubmit={add}>
-              <input value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} placeholder="Nom de l'athlète" autocapitalize="words" maxLength={40} autoFocus />
-              <input class="bib-in mono" value={bib} onInput={(e) => setBib((e.target as HTMLInputElement).value)} placeholder="n°" inputMode="numeric" aria-label="Dossard" />
-              <button type="submit" class="add" aria-label="Ajouter"><Icon name="plus" size={26} stroke={2.6} /></button>
-            </form>
-          ) : (
-            <button class="soft-btn" onClick={() => setAdding(true)}><Icon name="plus" size={18} stroke={2.6} />Ajouter un athlète</button>
-          )}
-        </section>
-
-        <section class="px block">
           <div class="sec-head"><h2>Dernières séances</h2>{sessions.length > 3 && <button class="link-sm" onClick={onAllSessions}>Tout voir</button>}</div>
           {!recent.length && <p class="muted">Pas encore de séance.</p>}
           <ul class="sess-list">
@@ -157,15 +106,6 @@ export function Profile({ user, group, sessions, onAddAthlete, onRemoveAthlete, 
         </section>
       </div>
 
-      {open && (
-        <AthletePage
-          st={open}
-          onClose={() => setOpen(null)}
-          onOpenSession={onOpenSession}
-          onSave={(a) => { onAddAthlete(a); saveAthletes([a]); setOpen({ ...open, athlete: a }) }}
-          onRemove={() => { archiveAthlete(open.athlete.id); onRemoveAthlete(open.athlete.id); setOpen(null) }}
-        />
-      )}
       {editing && user && (
         <EditProfile
           meta={{ name: meta.name ?? '', discipline: meta.discipline ?? '', club: meta.club ?? 'Torcy Canoë-Kayak' }}
@@ -173,80 +113,6 @@ export function Profile({ user, group, sessions, onAddAthlete, onRemoveAthlete, 
           onSaved={() => { setEditing(false); onProfileSaved() }}
         />
       )}
-    </div>
-  )
-}
-
-function AthletePage({ st, onClose, onOpenSession, onSave, onRemove }: {
-  st: AthleteStats
-  onClose: () => void
-  onOpenSession: (s: Session) => void
-  onSave: (a: Athlete) => void
-  onRemove: () => void
-}) {
-  const [name, setName] = useState(st.athlete.name)
-  const [bib, setBib] = useState(st.athlete.bib !== undefined ? String(st.athlete.bib) : '')
-  const [confirm, setConfirm] = useState(false)
-  const dirty = name.trim() !== st.athlete.name || (parseBib(bib) ?? null) !== (st.athlete.bib ?? null)
-  const save = () => {
-    const n = name.trim()
-    if (!n) return
-    const b = parseBib(bib)
-    const { bib: _old, ...rest } = st.athlete
-    onSave({ ...rest, name: n, ...(b !== undefined ? { bib: b } : {}) })
-  }
-
-  return (
-    <div class="layer">
-      <header class="px layer-head">
-        <div>
-          <span class="label">Athlète</span>
-          <h2>{label(st.athlete)}</h2>
-        </div>
-        <button class="rm" onClick={onClose} aria-label="Fermer"><Icon name="x" size={26} /></button>
-      </header>
-      <div class="scroll px">
-        <div class="statbox">
-          <div><b class="mono">{st.best !== undefined ? fmtDuration(st.best) : '—'}</b><span>Meilleur</span></div>
-          <div><b class="mono">{st.sessions}</b><span>Séances</span></div>
-          <div><b class="mono">{st.passages}</b><span>Passages</span></div>
-        </div>
-
-        <div class="sec-head"><h2>Ses séances</h2></div>
-        {!st.history.length && <p class="muted">Pas encore de temps enregistré.</p>}
-        <ul class="perf">
-          {st.history.map((h) => (
-            <li key={h.session.id}>
-              <button onClick={() => onOpenSession(h.session)}>
-                <span class="p-main">
-                  <b>{h.session.title || 'Séance'}</b>
-                  <small>{fmtDay(h.session.createdAt)} · {h.runs.length} passage{h.runs.length > 1 ? 's' : ''}</small>
-                </span>
-                <span class="mono g-time">{h.best !== undefined ? fmtDuration(h.best) : '—'}{h.best === st.best && <i class="pb">RECORD</i>}</span>
-                <Icon name="right" size={18} />
-              </button>
-            </li>
-          ))}
-        </ul>
-
-        <div class="sec-head"><h2>Modifier</h2></div>
-        <div class="field">
-          <input value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} maxLength={40} aria-label="Nom" />
-          <input class="bib-in mono" value={bib} onInput={(e) => setBib((e.target as HTMLInputElement).value)} placeholder="n°" inputMode="numeric" aria-label="Dossard" />
-        </div>
-        <button class="btn primary" style={{ marginTop: 10 }} disabled={!dirty || !name.trim()} onClick={save}>Enregistrer</button>
-        {confirm ? (
-          <div class="danger">
-            <p>Retirer {st.athlete.name} du groupe ? Ses temps restent dans l'historique des séances.</p>
-            <div class="row2">
-              <button class="btn outline" onClick={() => setConfirm(false)}>Garder</button>
-              <button class="btn primary" onClick={onRemove}>Retirer</button>
-            </div>
-          </div>
-        ) : (
-          <button class="link dim" style={{ alignSelf: 'center', margin: '8px auto 30px', display: 'block' }} onClick={() => setConfirm(true)}>Retirer du groupe</button>
-        )}
-      </div>
     </div>
   )
 }

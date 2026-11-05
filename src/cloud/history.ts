@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'preact/hooks'
-import type { Athlete, Session } from '../core/model'
-import { loadHistory } from '../store/db'
+import type { Athlete, Course, Session } from '../core/model'
+import { loadCourses, loadHistory, saveCourses } from '../store/db'
 import { supabase } from './supabase'
 
 interface SessionRow {
-  id: string; code: string; title?: string | null; comment?: string | null; general?: Session['general'] | null; created_at: string; ended_at: string | null
+  id: string; code: string; title?: string | null; comment?: string | null; general?: Session['general'] | null; course_id?: string | null; created_at: string; ended_at: string | null
   splits: number; athletes: Athlete[]; taps: Session['taps']
 }
 
@@ -14,6 +14,7 @@ const toSession = (r: SessionRow): Session => ({
   title: r.title ?? undefined,
   comment: r.comment ?? undefined,
   general: r.general ?? undefined,
+  courseId: r.course_id ?? undefined,
   createdAt: Date.parse(r.created_at),
   endedAt: r.ended_at ? Date.parse(r.ended_at) : undefined,
   splits: r.splits,
@@ -25,13 +26,21 @@ const toSession = (r: SessionRow): Session => ({
 export async function fetchSessions(): Promise<{ sessions: Session[]; source: 'cloud' | 'local' }> {
   const local = await loadHistory()
   if (!supabase) return { sessions: local, source: 'local' }
-  // Colonnes récentes en option : repli si les migrations 0004 / 0005 ne sont pas encore passées.
-  const query = (cols: string) =>
-    supabase!.from('sessions').select(cols).order('created_at', { ascending: false }).limit(300)
+  // Colonnes récentes en option : on retire celles qui n'existent pas encore (migrations 0004 à 0006).
   const base = 'id,code,created_at,ended_at,splits,athletes,taps'
-  let { data, error } = (await query(`${base},title,comment,general`)) as any
-  if (error) ({ data, error } = (await query(`${base},title`)) as any)
-  if (error) ({ data, error } = (await query(base)) as any)
+  let optional = ['title', 'comment', 'general', 'course_id']
+  let data: any = null
+  let error: any = null
+  for (let i = 0; i < 5; i++) {
+    ;({ data, error } = await supabase
+      .from('sessions')
+      .select([base, ...optional].join(','))
+      .order('created_at', { ascending: false })
+      .limit(300))
+    if (!error) break
+    const bad = optional.filter((c) => error.message.includes(c))
+    optional = bad.length ? optional.filter((c) => !bad.includes(c)) : optional.slice(0, -1)
+  }
   if (error || !data) return { sessions: local, source: 'local' }
   const cloud = (data as SessionRow[]).map(toSession)
   // Séances terminées hors ligne et pas encore envoyées : on les garde aussi.
@@ -82,22 +91,69 @@ export async function updateProfile(meta: { name?: string; discipline?: string; 
   if (error) throw error
 }
 
+// ───────────── Parcours ─────────────
+const courseRow = (c: Course) => ({
+  id: c.id, name: c.name, distance: c.distance ?? null, splits: c.splits ?? 0, notes: c.notes ?? null,
+  archived: false, updated_at: new Date().toISOString()
+})
+
+/** Parcours du coach : en ligne si possible (copie gardée sur le téléphone), sinon la copie locale. */
+export async function fetchCourses(): Promise<Course[]> {
+  const local = await loadCourses()
+  if (!supabase) return local
+  const { data, error } = await supabase.from('courses').select('id,name,distance,splits,notes').eq('archived', false).order('name')
+  if (error) return local
+  const cloud: Course[] = data.map((c: any) => ({
+    id: c.id, name: c.name,
+    ...(c.distance ? { distance: c.distance } : {}), ...(c.splits ? { splits: c.splits } : {}), ...(c.notes ? { notes: c.notes } : {})
+  }))
+  // Parcours créés hors ligne : envoyés maintenant.
+  const ids = new Set(cloud.map((c) => c.id))
+  const pending = local.filter((c) => !ids.has(c.id) && !c.id.startsWith('removed:'))
+  if (pending.length) await supabase.from('courses').upsert(pending.map(courseRow))
+  const all = [...cloud, ...pending].sort((a, b) => a.name.localeCompare(b.name))
+  await saveCourses(all)
+  return all
+}
+
+export async function saveCourse(c: Course, all: Course[]): Promise<Course[]> {
+  const next = [...all.filter((x) => x.id !== c.id), c].sort((a, b) => a.name.localeCompare(b.name))
+  await saveCourses(next)
+  if (supabase) await supabase.from('courses').upsert(courseRow(c))
+  return next
+}
+
+export async function removeCourse(id: string, all: Course[]): Promise<Course[]> {
+  const next = all.filter((x) => x.id !== id)
+  await saveCourses(next)
+  if (supabase) await supabase.from('courses').update({ archived: true, updated_at: new Date().toISOString() }).eq('id', id)
+  return next
+}
+
 /** Historique + groupe, rechargés à la demande. */
 export function useCoachData(enabled: boolean) {
   const [sessions, setSessions] = useState<Session[]>([])
   const [group, setGroup] = useState<Athlete[] | null>(null)
   const [source, setSource] = useState<'cloud' | 'local'>('local')
   const [loading, setLoading] = useState(true)
+  const [courses, setCourses] = useState<Course[]>([])
 
   const refresh = useCallback(async () => {
     setLoading(true)
-    const [{ sessions, source }, athletes] = await Promise.all([fetchSessions(), enabled ? fetchAthletes() : Promise.resolve(null)])
+    const [{ sessions, source }, athletes, crs] = await Promise.all([
+      fetchSessions(),
+      enabled ? fetchAthletes() : Promise.resolve(null),
+      enabled ? fetchCourses() : loadCourses()
+    ])
     setSessions(sessions)
     setSource(source)
     setGroup(athletes)
+    setCourses(crs)
     setLoading(false)
   }, [enabled])
 
   useEffect(() => { refresh() }, [refresh])
-  return { sessions, group, source, loading, refresh }
+  const upsertCourse = async (c: Course) => setCourses(await saveCourse(c, courses))
+  const deleteCourse = async (id: string) => setCourses(await removeCourse(id, courses))
+  return { sessions, group, source, loading, refresh, courses, upsertCourse, deleteCourse }
 }

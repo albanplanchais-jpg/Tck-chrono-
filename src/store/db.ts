@@ -1,7 +1,7 @@
 import { get, set } from 'idb-keyval'
-import type { Athlete, Session } from '../core/model'
+import type { Athlete, Course, Session } from '../core/model'
 
-const K = { session: 'session', roster: 'roster', history: 'history' }
+const K = { session: 'session', roster: 'roster', history: 'history', courses: 'courses' }
 
 export const loadSession = () => get<Session>(K.session)
 export const saveSession = (s: Session | undefined) => set(K.session, s)
@@ -14,6 +14,9 @@ export async function archive(s: Session) {
   const h = await loadHistory()
   await set(K.history, [s, ...h.filter((x) => x.id !== s.id)].slice(0, 100))
 }
+
+export const loadCourses = async () => (await get<Course[]>(K.courses)) ?? []
+export const saveCourses = (c: Course[]) => set(K.courses, c)
 
 /** Demande au navigateur de ne pas effacer nos données. */
 export function requestPersist() {

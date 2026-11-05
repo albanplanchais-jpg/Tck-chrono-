@@ -20,6 +20,17 @@ export interface Tap {
   by?: string
 }
 
+/** Parcours de référence (ex. « Bassin 500 m ») : records et classement par parcours. */
+export interface Course {
+  id: string
+  name: string
+  /** Longueur en mètres. */
+  distance?: number
+  /** Nombre d'inters habituel sur ce parcours. */
+  splits?: number
+  notes?: string
+}
+
 export interface Session {
   id: string
   createdAt: number
@@ -28,6 +39,8 @@ export interface Session {
   taps: Tap[]
   /** Nombre de chronos intermédiaires attendus par passage (0 = aucun). */
   splits?: number
+  /** Parcours sur lequel la séance a été faite. */
+  courseId?: string
   /** Titre libre (ex. « Bassin · 6 × 1 min »). */
   title?: string
   /** Commentaire libre (ex. « beaucoup de vent »). */
