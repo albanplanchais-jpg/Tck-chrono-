@@ -33,12 +33,10 @@ const STATUS: Partial<Record<FfckStatus, string>> = {
 export function LicenseeSearch({ index, count, version, status, myClub, roster, isAdded, onAdd }: Props) {
   const [q, setQ] = useState('')
   const [bib, setBib] = useState('')
-  const [onlyMine, setOnlyMine] = useState(true)
 
-  const mine = useMemo(() => (index && q.trim() ? search(index, q, { myClub, onlyMyClub: true, limit: 8 }) : []), [index, q, myClub])
-  const all = useMemo(() => (index && q.trim() && (!onlyMine || !mine.length) ? search(index, q, { myClub, limit: 8 }) : []), [index, q, myClub, onlyMine, mine.length])
-  const hits = onlyMine && mine.length ? mine : all
-  const fellBack = onlyMine && !mine.length && all.length > 0
+  // Une seule liste : mon club d'abord (bonus de score), puis les autres clubs.
+  const hits = useMemo(() => (index && q.trim() ? search(index, q, { myClub, limit: 10 }) : []), [index, q, myClub])
+  const firstOther = hits.findIndex((h) => !h.mine)
 
   const reset = () => { setQ(''); setBib('') }
   // Les suggestions restent visibles au-dessus du bas de l'écran.
@@ -107,23 +105,14 @@ export function LicenseeSearch({ index, count, version, status, myClub, roster, 
         </div>
       </form>
 
-      {index && (
-        <div class="lic-bar">
-          <div class="segment n2 lic-scope" role="group" aria-label="Rechercher dans">
-            <button class={onlyMine ? 'on' : ''} aria-pressed={onlyMine} onClick={() => setOnlyMine(true)}>Mon club</button>
-            <button class={!onlyMine ? 'on' : ''} aria-pressed={!onlyMine} onClick={() => setOnlyMine(false)}>Tous</button>
-          </div>
-        </div>
-      )}
       {info && <p class="lic-info mono">{info}</p>}
 
       {q.trim().length >= 2 && (
         <ul class="lic-results" id="lic-results" role="listbox" ref={listRef}>
-          {fellBack && <li class="lic-note">Personne de ton club : résultats de tous les clubs</li>}
-          {hits.map(({ l }) => {
+          {hits.map(({ l }, i) => {
             const added = isAdded({ name: licenseeName(l), licence: l.licence })
             return (
-              <li key={l.licence} role="option" aria-selected={false}>
+              <li key={l.licence} role="option" aria-selected={false} class={i === firstOther && i > 0 ? 'lic-sep' : ''}>
                 <button class={`lic-row ${added ? 'added' : ''}`} disabled={added} onClick={() => pick(l)}>
                   <span class="lic-main">
                     <b>{l.prenom} <span class="caps">{l.nom}</span></b>

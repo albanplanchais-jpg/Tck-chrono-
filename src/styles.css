@@ -789,3 +789,17 @@ a.btn { text-decoration: none; color: inherit; }
 .rank-row > span:nth-child(2) { min-width: 0; overflow: hidden; }
 .rank-row .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .rank-row { column-gap: 8px; }
+
+/* ——— Simplification de la préparation ——— */
+.meta-box { margin: 18px 0 20px; }
+.meta-toggle { width: 100%; min-height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1.5px dashed var(--g3); color: #ccc; font-size: 15px; text-align: left; }
+.meta-toggle span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta-toggle small { color: var(--g4); margin-left: 6px; }
+.meta-box .title-in:first-child { margin-top: 0; }
+.tools-r { display: flex; gap: 6px; }
+.order-help { margin: 8px 0 0; font-size: 12px; color: var(--g4); }
+.waves.simple ul li { grid-template-columns: 58px minmax(0, 1fr) 0 0 auto; }
+.lic-results li.lic-sep { border-top: 2px solid var(--g3); position: relative; }
+.lic-results li.lic-sep::before { content: 'Autres clubs'; display: block; padding: 6px 12px 0; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--g4); }
+.waves.simple ul li { grid-template-columns: 58px minmax(0, 1fr) 36px; }
+.waves.simple ul li > span:empty { display: none; }

@@ -9,7 +9,6 @@ import type { useLicensees } from '../ffck/store'
 import { label } from '../core/startOrder'
 import type { User } from '@supabase/supabase-js'
 import { cloudEnabled } from '../cloud/supabase'
-import { signOut } from '../cloud/auth'
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
@@ -28,6 +27,7 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
   const [splits, setSplits] = useState(store.lastSplits)
   const [title, setTitle] = useState('')
   const [comment, setComment] = useState('')
+  const [showMeta, setShowMeta] = useState(false)
   const [courseId, setCourseId] = useState<string | undefined>(initialCourse?.id)
   useEffect(() => {
     if (!initialCourse) return
@@ -60,13 +60,6 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
           <img src="/logo.png" alt="Torcy Canoë-Kayak" width={72} height={72} />
         </header>
 
-        {user && (
-          <div class="account">
-            <span>Coach · <b>{(user.user_metadata?.name as string) || user.email}</b></span>
-            <button class="link" onClick={signOut}>Déconnexion</button>
-          </div>
-        )}
-
         {hint && (
           <div class="banner">
             <span>Pour installer l'app : <b>Partager</b> → <b>Sur l'écran d'accueil</b>.</span>
@@ -88,15 +81,6 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
           </div>
         )}
 
-        <label class="title-in">
-          <span class="label">Nom de la séance · facultatif</span>
-          <input value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} placeholder="Bassin · 6 × 1 min" maxLength={80} />
-        </label>
-        <label class="title-in">
-          <span class="label">Commentaire · facultatif</span>
-          <input value={comment} onInput={(e) => setComment((e.target as HTMLInputElement).value)} placeholder="Beaucoup de vent, eau calme…" maxLength={500} />
-        </label>
-
         <div style={{ marginTop: 14 }}>
           <LicenseeSearch
             index={ffck?.index}
@@ -108,11 +92,6 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
             isAdded={(a) => list.some((x) => (a.licence && x.licence === a.licence) || x.name.toLowerCase() === a.name.toLowerCase())}
             onAdd={add}
           />
-        </div>
-
-        <div class="section-head">
-          <span class="label white">Ordre de départ</span>
-          <span class="count">{list.length} athlète{list.length > 1 ? 's' : ''}</span>
         </div>
 
         {list.length === 0 ? (
@@ -139,6 +118,25 @@ export function Setup({ store, user, courses = [], initialCourse, ffck }: {
             </div>
           </section>
         )}
+        <div class="meta-box">
+          {showMeta ? (
+            <>
+              <label class="title-in">
+                <span class="label">Nom de la séance</span>
+                <input value={title} onInput={(e) => setTitle((e.target as HTMLInputElement).value)} placeholder="Bassin · 6 × 1 min" maxLength={80} />
+              </label>
+              <label class="title-in">
+                <span class="label">Commentaire</span>
+                <input value={comment} onInput={(e) => setComment((e.target as HTMLInputElement).value)} placeholder="Beaucoup de vent, eau calme…" maxLength={500} />
+              </label>
+            </>
+          ) : (
+            <button class="meta-toggle" onClick={() => setShowMeta(true)}>
+              <Icon name="edit" size={15} stroke={2.4} />
+              {title || comment ? <span><b>{title || 'Séance'}</b>{comment ? ` · ${comment}` : ''}</span> : <span>Nom et commentaire <small>facultatif</small></span>}
+            </button>
+          )}
+        </div>
       </div>
 
       <footer class="bottom bar">

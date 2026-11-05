@@ -17,6 +17,8 @@ interface Props {
  */
 export function StartOrder({ athletes, onChange, onRemove, started }: Props) {
   const [pickFor, setPickFor] = useState<string | null>(null)
+  // Mode simple par défaut : dossard, nom, ✕ et glisser. « Vagues » montre départs groupés et flèches.
+  const [advanced, setAdvanced] = useState(false)
   // Glisser-déposer d'une vague (poignée ⋮⋮ à gauche).
   const [drag, setDrag] = useState<{ id: string; from: number; y0: number; dy: number; over: number } | null>(null)
   const listRef = useRef<HTMLOListElement>(null)
@@ -55,13 +57,17 @@ export function StartOrder({ athletes, onChange, onRemove, started }: Props) {
   return (
     <div class="order">
       <div class="order-tools">
-        <span class="label">{ws.length} départ{ws.length > 1 ? 's' : ''} · {athletes.length} athlète{athletes.length > 1 ? 's' : ''}</span>
-        <button class="pill outline" onClick={() => onChange(sortByBib(athletes))} disabled={athletes.length < 2}>
-          Trier par n°
-        </button>
+        <span class="label white">Ordre de départ · {athletes.length}</span>
+        <span class="tools-r">
+          <button class="pill outline" onClick={() => onChange(sortByBib(athletes))} disabled={athletes.length < 2}>Trier n°</button>
+          <button class={`pill ${advanced ? 'solid' : 'outline'}`} aria-pressed={advanced} onClick={() => { setAdvanced(!advanced); setPickFor(null) }} disabled={athletes.length < 2}>
+            Vagues
+          </button>
+        </span>
       </div>
 
-      <ol class={`waves ${drag ? 'sorting' : ''}`} ref={listRef}>
+      {advanced && <p class="order-help">« Part avec… » : ils partent ensemble (un seul DÉP pour la vague).</p>}
+      <ol class={`waves ${drag ? 'sorting' : ''} ${advanced ? 'adv' : 'simple'}`} ref={listRef}>
         {ws.map((w, wi) => (
           <li
             key={w[0].id}
@@ -91,14 +97,14 @@ export function StartOrder({ athletes, onChange, onRemove, started }: Props) {
                     onChange={(e) => setBib(a.id, (e.target as HTMLInputElement).value)}
                   />
                   <span class="nm">{a.name}</span>
-                  {w.length > 1 ? (
+                  {!advanced ? null : w.length > 1 ? (
                     <button class="mini" onClick={() => onChange(startAlone(athletes, a.id))} aria-label={`${a.name} part seul`}>Seul</button>
                   ) : (
                     <button class={`mini ${pickFor === a.id ? 'on' : ''}`} onClick={() => setPickFor(pickFor === a.id ? null : a.id)} disabled={athletes.length < 2}>
                       Part avec…
                     </button>
                   )}
-                  {ai === 0 ? (
+                  {!advanced ? <span /> : ai === 0 ? (
                     <span class="arrows">
                       <button onClick={() => onChange(moveWave(athletes, a.id, -1))} disabled={wi === 0} aria-label="Partir plus tôt"><Icon name="up" size={16} stroke={2.8} /></button>
                       <button onClick={() => onChange(moveWave(athletes, a.id, 1))} disabled={wi === ws.length - 1} aria-label="Partir plus tard"><Icon name="down" size={16} stroke={2.8} /></button>
