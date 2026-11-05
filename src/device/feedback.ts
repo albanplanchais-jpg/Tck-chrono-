@@ -34,3 +34,28 @@ export function launchBeep(long = false) {
     o.stop(ctx.currentTime + d + 0.02)
   } catch {}
 }
+
+/**
+ * iPhone (Safari) : le son n'est autorisé qu'après un toucher. On prépare donc le contexte audio
+ * au premier toucher, pour que les bips du chrono général (déclenchés par le minuteur) sonnent.
+ */
+export function unlockAudioOnFirstTouch() {
+  const unlock = () => {
+    try {
+      ctx ??= new AudioContext()
+      if (ctx.state === 'suspended') ctx.resume()
+      // Son silencieux très court : « réveille » la sortie audio sur iOS.
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      g.gain.value = 0
+      o.connect(g).connect(ctx.destination)
+      o.start()
+      o.stop(ctx.currentTime + 0.01)
+    } catch {}
+  }
+  window.addEventListener('pointerdown', unlock, { once: true, capture: true })
+  // Au retour dans l'app, iOS peut suspendre le son : on le relance au toucher suivant.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') window.addEventListener('pointerdown', unlock, { once: true, capture: true })
+  })
+}

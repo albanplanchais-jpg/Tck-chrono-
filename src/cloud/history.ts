@@ -28,23 +28,31 @@ export const toSession = (r: SessionRow): Session => ({
 export async function fetchSessions(): Promise<{ sessions: Session[]; source: 'cloud' | 'local' }> {
   const local = await loadHistory()
   if (!supabase) return { sessions: local, source: 'local' }
-  // Colonnes récentes en option : on retire celles qui n'existent pas encore (migrations 0004 à 0006).
+  // Colonnes récentes en option : on retire celles qui n'existent pas encore (migrations 0004 à 0007).
   const base = 'id,code,coach_id,created_at,ended_at,splits,athletes,taps'
   let optional = ['title', 'comment', 'general', 'course_id', 'coach_name']
+  const uid = (await supabase.auth.getSession()).data.session?.user.id
+  // Mes séances d'abord (jusqu'à 500), puis les plus récentes des autres coachs (150) :
+  // les séances partagées ne doivent jamais pousser les miennes hors de l'historique.
+  const run = (cols: string, scope: 'mine' | 'others') => {
+    let q = supabase!.from('sessions').select(cols).order('created_at', { ascending: false })
+    if (uid) q = scope === 'mine' ? q.eq('coach_id', uid) : q.neq('coach_id', uid)
+    return q.limit(scope === 'mine' ? 500 : 150)
+  }
   let data: any = null
   let error: any = null
-  for (let i = 0; i < 5; i++) {
-    ;({ data, error } = await supabase
-      .from('sessions')
-      .select([base, ...optional].join(','))
-      .order('created_at', { ascending: false })
-      .limit(300))
+  for (let i = 0; i < 6; i++) {
+    const cols = [base, ...optional].join(',')
+    const [mine, others] = await Promise.all([run(cols, 'mine'), uid ? run(cols, 'others') : Promise.resolve({ data: [], error: null })])
+    error = mine.error ?? others.error
+    data = error ? null : [...(mine.data ?? []), ...(others.data ?? [])]
     if (!error) break
     const bad = optional.filter((c) => error.message.includes(c))
     optional = bad.length ? optional.filter((c) => !bad.includes(c)) : optional.slice(0, -1)
   }
   if (error || !data) return { sessions: local, source: 'local' }
-  const cloud = (data as SessionRow[]).map(toSession)
+  const seen = new Set<string>()
+  const cloud = (data as SessionRow[]).filter((r) => !seen.has(r.id) && seen.add(r.id)).map(toSession)
   // Séances terminées hors ligne et pas encore envoyées : on les garde aussi.
   const ids = new Set(cloud.map((s) => s.id))
   const merged = [...cloud, ...local.filter((s) => !ids.has(s.id))].sort((a, b) => b.createdAt - a.createdAt)
