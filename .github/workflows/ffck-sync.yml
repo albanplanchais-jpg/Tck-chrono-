@@ -1,0 +1,57 @@
+# Synchro quotidienne des licenciés FFCK → bucket Supabase privé « ffck ».
+# Tourne à 2 h et 3 h UTC ; le script ne continue qu'à 4 h heure de Paris (été comme hiver).
+# Secrets à créer (Settings → Secrets and variables → Actions) :
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY            (jamais dans la PWA)
+#   FFCK_SOURCE (csv | api), FFCK_CONTACT (e-mail ou téléphone de contact pour la FFCK)
+#   selon la source : FFCK_CSV_URL + FFCK_AUTH_HEADER, ou FFCK_API_URL + FFCK_API_TOKEN
+#   facultatif : DISCORD_WEBHOOK_URL (alerte en cas d'échec ; sinon e-mail GitHub)
+name: Synchro licenciés FFCK
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mode'
+        type: choice
+        options: [production, dry-run, test]
+        default: dry-run
+
+concurrency:
+  group: ffck-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Synchro
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FFCK_SOURCE: ${{ secrets.FFCK_SOURCE }}
+          FFCK_CONTACT: ${{ secrets.FFCK_CONTACT }}
+          FFCK_CSV_URL: ${{ secrets.FFCK_CSV_URL }}
+          FFCK_AUTH_HEADER: ${{ secrets.FFCK_AUTH_HEADER }}
+          FFCK_ENCODING: ${{ secrets.FFCK_ENCODING }}
+          FFCK_API_URL: ${{ secrets.FFCK_API_URL }}
+          FFCK_API_TOKEN: ${{ secrets.FFCK_API_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          # Exécution planifiée : seulement à 4 h, heure de Paris.
+          FFCK_ONLY_AT_PARIS_HOUR: ${{ github.event_name == 'schedule' && '4' || '' }}
+        run: |
+          case "${{ github.event.inputs.mode || 'production' }}" in
+            test)    node scripts/ffck-sync/sync.mjs --test ;;
+            dry-run) node scripts/ffck-sync/sync.mjs --dry-run ;;
+            *)       node scripts/ffck-sync/sync.mjs ;;
+          esac

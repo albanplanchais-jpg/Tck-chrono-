@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'preact/hooks'
-import type { Session } from '../core/model'
+import type { Athlete, Session } from '../core/model'
 import { ranking } from '../core/results'
 import { fmtDay, fmtDuration, fmtGap, fmtHM } from '../core/format'
 import type { Store } from '../store/useSession'
@@ -9,12 +9,14 @@ import { TapLog } from '../components/TapLog'
 import { SessionInfo } from '../components/SessionInfo'
 
 /** Résultats d'une séance. Sans `store` : séance passée, consultée depuis l'historique (lecture seule). */
-export function Results({ store, session, onBack, onEditMeta }: {
+export function Results({ store, session, onBack, onEditMeta, highlight }: {
   store?: Store
   session: Session
   onBack?: () => void
   /** Séance passée : enregistre le nouveau nom / commentaire. */
   onEditMeta?: (v: { title?: string; comment?: string }) => Promise<void>
+  /** Espace athlète : met en avant ses propres lignes. */
+  highlight?: (a: Athlete) => boolean
 }) {
   const rows = useMemo(() => ranking(session), [session])
   const [open, setOpen] = useState<string | null>(null)
@@ -44,7 +46,8 @@ export function Results({ store, session, onBack, onEditMeta }: {
           )}
           <span class="label">{session.endedAt ? 'Séance terminée' : 'Séance en cours'}</span>
           <h1>{session.title || 'Résultats'}</h1>
-          <button class="edit-meta" onClick={() => setInfo(true)}><Icon name="edit" size={13} stroke={2.4} />{session.comment ? 'Modifier' : 'Nom, commentaire'}</button>
+          {session.coachName && !store && !onEditMeta && <span class="res-coach">Chronométrée par {session.coachName}</span>}
+          {(store || onEditMeta) && <button class="edit-meta" onClick={() => setInfo(true)}><Icon name="edit" size={13} stroke={2.4} />{session.comment ? 'Modifier' : 'Nom, commentaire'}</button>}
           <span class="res-sub">{fmtDay(session.createdAt)} · {fmtHM(session.createdAt)}{session.endedAt ? ` – ${fmtHM(session.endedAt)}` : ''}</span>
         </div>
         {store && (
@@ -66,7 +69,7 @@ export function Results({ store, session, onBack, onEditMeta }: {
           const expanded = open === r.athlete.id
           const multi = r.runs.length > 1 || r.runs.some((x) => x.splits.length > 0)
           return (
-            <li key={r.athlete.id} class={r.rank === 1 ? 'first' : ''}>
+            <li key={r.athlete.id} class={`${r.rank === 1 ? 'first' : ''} ${highlight?.(r.athlete) ? 'me-row' : ''}`}>
               <button
                 class={`rank-row ${r.best === undefined ? 'nt' : ''}`}
                 aria-expanded={multi ? expanded : undefined}

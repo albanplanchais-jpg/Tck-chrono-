@@ -7,6 +7,11 @@ export interface Athlete {
   bib?: number
   /** Part en même temps que l'athlète précédent dans l'ordre de départ (même vague). */
   withPrev?: boolean
+  /** Infos FFCK (si choisi dans la liste des licenciés). */
+  licence?: string
+  club?: string
+  categorie?: string
+  embarcation?: string
 }
 
 /** Un tap = un instant capturé. Les temps sont toujours recalculés à partir des taps. */
@@ -41,6 +46,9 @@ export interface Session {
   splits?: number
   /** Parcours sur lequel la séance a été faite. */
   courseId?: string
+  /** Coach qui a chronométré (séances partagées). Absent = séance de ce téléphone. */
+  coachId?: string
+  coachName?: string
   /** Titre libre (ex. « Bassin · 6 × 1 min »). */
   title?: string
   /** Commentaire libre (ex. « beaucoup de vent »). */

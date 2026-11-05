@@ -4,17 +4,19 @@ import { loadCourses, loadHistory, saveCourses } from '../store/db'
 import { supabase } from './supabase'
 
 interface SessionRow {
-  id: string; code: string; title?: string | null; comment?: string | null; general?: Session['general'] | null; course_id?: string | null; created_at: string; ended_at: string | null
+  id: string; code: string; title?: string | null; comment?: string | null; general?: Session['general'] | null; course_id?: string | null; coach_id?: string; coach_name?: string | null; created_at: string; ended_at: string | null
   splits: number; athletes: Athlete[]; taps: Session['taps']
 }
 
-const toSession = (r: SessionRow): Session => ({
+export const toSession = (r: SessionRow): Session => ({
   id: r.id,
   code: r.code,
   title: r.title ?? undefined,
   comment: r.comment ?? undefined,
   general: r.general ?? undefined,
   courseId: r.course_id ?? undefined,
+  coachId: r.coach_id,
+  coachName: r.coach_name ?? undefined,
   createdAt: Date.parse(r.created_at),
   endedAt: r.ended_at ? Date.parse(r.ended_at) : undefined,
   splits: r.splits,
@@ -27,8 +29,8 @@ export async function fetchSessions(): Promise<{ sessions: Session[]; source: 'c
   const local = await loadHistory()
   if (!supabase) return { sessions: local, source: 'local' }
   // Colonnes récentes en option : on retire celles qui n'existent pas encore (migrations 0004 à 0006).
-  const base = 'id,code,created_at,ended_at,splits,athletes,taps'
-  let optional = ['title', 'comment', 'general', 'course_id']
+  const base = 'id,code,coach_id,created_at,ended_at,splits,athletes,taps'
+  let optional = ['title', 'comment', 'general', 'course_id', 'coach_name']
   let data: any = null
   let error: any = null
   for (let i = 0; i < 5; i++) {
@@ -52,17 +54,28 @@ export async function fetchSessions(): Promise<{ sessions: Session[]; source: 'c
 /** Groupe d'athlètes du coach. null si la table n'existe pas encore (migration 0004). */
 export async function fetchAthletes(): Promise<Athlete[] | null> {
   if (!supabase) return null
-  const { data, error } = await supabase.from('athletes').select('id,name,bib').eq('archived', false).order('name')
+  let { data, error } = (await supabase.from('athletes').select('id,name,bib,licence,club,categorie,embarcation').eq('archived', false).order('name')) as any
+  if (error) ({ data, error } = (await supabase.from('athletes').select('id,name,bib').eq('archived', false).order('name')) as any)
   if (error) return null
-  return data.map((a: any) => ({ id: a.id, name: a.name, ...(typeof a.bib === 'number' ? { bib: a.bib } : {}) }))
+  return data.map((a: any) => ({
+    id: a.id, name: a.name,
+    ...(typeof a.bib === 'number' ? { bib: a.bib } : {}),
+    ...(a.licence ? { licence: a.licence } : {}), ...(a.club ? { club: a.club } : {}),
+    ...(a.categorie ? { categorie: a.categorie } : {}), ...(a.embarcation ? { embarcation: a.embarcation } : {})
+  }))
 }
 
 export async function saveAthletes(list: Athlete[]): Promise<boolean> {
   if (!supabase || !list.length) return true
   const now = new Date().toISOString()
-  const { error } = await supabase
-    .from('athletes')
-    .upsert(list.map((a) => ({ id: a.id, name: a.name, bib: a.bib ?? null, archived: false, updated_at: now })))
+  const rows = list.map((a) => ({
+    id: a.id, name: a.name, bib: a.bib ?? null, archived: false, updated_at: now,
+    licence: a.licence ?? null, club: a.club ?? null, categorie: a.categorie ?? null, embarcation: a.embarcation ?? null
+  }))
+  let { error } = await supabase.from('athletes').upsert(rows)
+  // Repli si la migration 0007 (colonnes FFCK) n'est pas encore passée.
+  if (error && /licence|club|categorie|embarcation/.test(error.message))
+    ({ error } = await supabase.from('athletes').upsert(rows.map(({ licence: _l, club: _c, categorie: _g, embarcation: _e, ...r }) => r)))
   return !error
 }
 
@@ -101,7 +114,11 @@ const courseRow = (c: Course) => ({
 export async function fetchCourses(): Promise<Course[]> {
   const local = await loadCourses()
   if (!supabase) return local
-  const { data, error } = await supabase.from('courses').select('id,name,distance,splits,notes').eq('archived', false).order('name')
+  // Depuis la migration 0007 les parcours de tous les coachs sont lisibles : on ne liste que les siens.
+  const uid = (await supabase.auth.getSession()).data.session?.user.id
+  let q = supabase.from('courses').select('id,name,distance,splits,notes').eq('archived', false).order('name')
+  if (uid) q = q.eq('coach_id', uid)
+  const { data, error } = await q
   if (error) return local
   const cloud: Course[] = data.map((c: any) => ({
     id: c.id, name: c.name,

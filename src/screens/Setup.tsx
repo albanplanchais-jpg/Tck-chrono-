@@ -4,7 +4,9 @@ import { fmtDay } from '../core/format'
 import type { Store } from '../store/useSession'
 import { Icon } from '../components/Icon'
 import { StartOrder } from '../components/StartOrder'
-import { label, parseBib } from '../core/startOrder'
+import { LicenseeSearch } from '../components/LicenseeSearch'
+import type { useLicensees } from '../ffck/store'
+import { label } from '../core/startOrder'
 import type { User } from '@supabase/supabase-js'
 import { cloudEnabled } from '../cloud/supabase'
 import { signOut } from '../cloud/auth'
@@ -12,16 +14,16 @@ import { signOut } from '../cloud/auth'
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
 
-export function Setup({ store, user, courses = [], initialCourse }: {
+export function Setup({ store, user, courses = [], initialCourse, ffck }: {
   store: Store
+  /** Licenciés FFCK (autocomplétion). */
+  ffck?: ReturnType<typeof useLicensees>
   user?: User | null
   courses?: Course[]
   /** Parcours choisi depuis l'onglet Parcours (« Nouvelle séance sur ce parcours »). */
   initialCourse?: Course
 }) {
   const [list, setList] = useState<Athlete[]>(store.lastGroup)
-  const [name, setName] = useState('')
-  const [bib, setBib] = useState('')
   const [hint, setHint] = useState(isIOS && !standalone)
   const [splits, setSplits] = useState(store.lastSplits)
   const [title, setTitle] = useState('')
@@ -42,17 +44,9 @@ export function Setup({ store, user, courses = [], initialCourse }: {
   }
 
   const has = (n: string) => list.some((a) => a.name.toLowerCase() === n.trim().toLowerCase())
-  const add = (a: Athlete) => !has(a.name) && setList((l) => [...l, { ...a, withPrev: undefined }])
-  const submit = (e: Event) => {
-    e.preventDefault()
-    const n = name.trim()
-    if (!n) return
-    const known = store.roster.find((a) => a.name.toLowerCase() === n.toLowerCase())
-    const b = parseBib(bib)
-    add({ ...(known ?? { id: uid(), name: n }), withPrev: undefined, ...(b !== undefined ? { bib: b } : {}) })
-    setName('')
-    setBib('')
-  }
+  const add = (a: Athlete) =>
+    !has(a.name) && !(a.licence && list.some((x) => x.licence === a.licence)) && setList((l) => [...l, { ...a, withPrev: undefined }])
+  const myClub = ((user?.user_metadata?.club as string) || 'Torcy Canoë-Kayak').trim()
   const recents = store.roster.filter((a) => !has(a.name))
 
   return (
@@ -103,30 +97,18 @@ export function Setup({ store, user, courses = [], initialCourse }: {
           <input value={comment} onInput={(e) => setComment((e.target as HTMLInputElement).value)} placeholder="Beaucoup de vent, eau calme…" maxLength={500} />
         </label>
 
-        <form onSubmit={submit} style={{ marginTop: 14 }}>
-          <label class="label" for="nm">Ajouter un athlète · nom et dossard</label>
-          <div class="field">
-            <input
-              id="nm"
-              value={name}
-              onInput={(e) => setName((e.target as HTMLInputElement).value)}
-              placeholder="Nom de l'athlète"
-              autocapitalize="words"
-              autocomplete="off"
-              enterkeyhint="next"
-            />
-            <input
-              class="bib-in mono"
-              value={bib}
-              onInput={(e) => setBib((e.target as HTMLInputElement).value)}
-              placeholder="n°"
-              inputMode="numeric"
-              aria-label="Dossard"
-              enterkeyhint="done"
-            />
-            <button type="submit" class="add" aria-label="Ajouter"><Icon name="plus" size={28} stroke={2.6} /></button>
-          </div>
-        </form>
+        <div style={{ marginTop: 14 }}>
+          <LicenseeSearch
+            index={ffck?.index}
+            count={ffck?.count}
+            version={ffck?.version}
+            status={ffck?.status ?? 'idle'}
+            myClub={myClub}
+            roster={store.roster}
+            isAdded={(a) => list.some((x) => (a.licence && x.licence === a.licence) || x.name.toLowerCase() === a.name.toLowerCase())}
+            onAdd={add}
+          />
+        </div>
 
         <div class="section-head">
           <span class="label white">Ordre de départ</span>

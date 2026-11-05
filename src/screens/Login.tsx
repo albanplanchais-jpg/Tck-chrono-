@@ -6,6 +6,7 @@ import { resetPassword, signIn, signUp } from '../cloud/auth'
 export function Login() {
   const [mode, setMode] = useState<'in' | 'up'>('in')
   const [name, setName] = useState('')
+  const [role, setRole] = useState<'coach' | 'athlete'>('coach')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -20,7 +21,7 @@ export function Login() {
     try {
       if (mode === 'in') await signIn(email, password)
       else {
-        const active = await signUp(email, password, name)
+        const active = await signUp(email, password, name, role)
         if (!active) {
           setInfo(`Compte créé. Un e-mail de confirmation a été envoyé à ${email.trim()} : clique sur le lien, puis reviens ici pour te connecter.`)
           setMode('in')
@@ -49,12 +50,18 @@ export function Login() {
       <div class="scroll px">
         <header class="login-head">
           <img src="/logo.png" alt="Torcy Canoë-Kayak" width={120} height={120} />
-          <span class="label">TCK Chrono · Espace coach</span>
+          <span class="label">TCK Chrono</span>
           <h1>{mode === 'in' ? 'Connexion' : 'Créer un compte'}</h1>
-          <p class="muted">Un compte coach est nécessaire pour créer une séance et partager le lien aux athlètes.</p>
+          <p class="muted">Coach : crée et chronomètre tes séances. Athlète : retrouve tous tes résultats.</p>
         </header>
 
         <form class="login-form" onSubmit={submit}>
+          {mode === 'up' && (
+            <div class="segment n2 role-pick" role="group" aria-label="Je suis">
+              <button type="button" class={role === 'coach' ? 'on' : ''} aria-pressed={role === 'coach'} onClick={() => setRole('coach')}>Coach</button>
+              <button type="button" class={role === 'athlete' ? 'on' : ''} aria-pressed={role === 'athlete'} onClick={() => setRole('athlete')}>Athlète</button>
+            </div>
+          )}
           {mode === 'up' && (
             <label>
               <span class="label">Prénom et nom</span>

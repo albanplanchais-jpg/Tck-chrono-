@@ -26,7 +26,8 @@ export interface AthleteStats {
 }
 
 /** Rattache un athlète d'une séance au groupe : même id, sinon même nom. */
-const sameAthlete = (a: Athlete, b: Athlete) => a.id === b.id || a.name.trim().toLowerCase() === b.name.trim().toLowerCase()
+export const sameAthlete = (a: Athlete, b: Athlete) =>
+  a.id === b.id || (!!a.licence && a.licence === b.licence) || a.name.trim().toLowerCase() === b.name.trim().toLowerCase()
 
 /** Statistiques de chaque athlète du groupe sur toutes les séances. */
 export function athleteStats(group: Athlete[], sessions: Session[]): AthleteStats[] {

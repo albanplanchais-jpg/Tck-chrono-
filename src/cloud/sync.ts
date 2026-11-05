@@ -21,6 +21,15 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
   const latest = useRef(session)
   const dirty = useRef(false)
   const missing = useRef(new Set<string>())
+  // Nom du coach affiché sur les séances partagées.
+  const coachName = useRef<string | null>(null)
+  useEffect(() => {
+    if (!enabled || !supabase) return
+    supabase.auth.getSession().then(({ data }) => {
+      const u = data.session?.user
+      coachName.current = ((u?.user_metadata?.name as string) || u?.email?.split('@')[0] || '').slice(0, 60) || null
+    })
+  }, [enabled])
   const athletesKey = useRef('')
   const timer = useRef<number | undefined>(undefined)
   latest.current = session
@@ -52,12 +61,13 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
       updated_at: new Date().toISOString()
     }
     const optional: Record<string, unknown> = {
-      title: s.title ?? null, comment: s.comment ?? null, general: s.general ?? null, course_id: s.courseId ?? null
+      title: s.title ?? null, comment: s.comment ?? null, general: s.general ?? null, course_id: s.courseId ?? null,
+      coach_name: coachName.current
     }
     for (const [k, v] of Object.entries(optional)) if (!missing.current.has(k)) row[k] = v
     let { error } = await supabase.from('sessions').upsert(row)
     // Repli si une migration récente (0004 titre, 0005 commentaire / chrono général) n'est pas encore passée.
-    for (let i = 0; error && i < 4; i++) {
+    for (let i = 0; error && i < 5; i++) {
       const col = Object.keys(optional).find((k) => k in row && error!.message.includes(k))
       if (!col) break
       missing.current.add(col)

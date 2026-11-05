@@ -16,6 +16,8 @@ import { Profile } from './screens/Profile'
 import { Courses } from './screens/Courses'
 import { Athletes } from './screens/Athletes'
 import { TabBar, type Tab } from './components/TabBar'
+import { useLicensees } from './ffck/store'
+import { AthleteHome } from './screens/AthleteHome'
 
 /** /s/CODE → page athlète (sans compte). */
 const athleteCode = location.pathname.match(/^\/s\/([A-Za-z0-9]{6})\/?$/)?.[1]?.toUpperCase()
@@ -24,7 +26,15 @@ const keeperToken = location.pathname.match(/^\/t\/([a-z0-9]{16,40})\/?$/)?.[1]
 
 export function App() {
   if (keeperToken) return <KeeperView token={keeperToken} />
-  return athleteCode ? <AthleteView code={athleteCode} /> : <CoachApp />
+  return athleteCode ? <AthleteView code={athleteCode} /> : <Accounts />
+}
+
+/** Compte athlète → ses résultats ; sinon espace coach. */
+function Accounts() {
+  const { user, loading } = useAuth()
+  if (loading) return <div class="screen" />
+  if (user?.user_metadata?.role === 'athlete') return <AthleteHome user={user} />
+  return <CoachApp />
 }
 
 function CoachApp() {
@@ -33,6 +43,7 @@ function CoachApp() {
   const online = cloudEnabled && !!user
   const sync = useCloudSync(store.session, online, { onJoined: store.addAthletes, onRemoteTaps: store.mergeRemote })
   const data = useCoachData(online)
+  const ffck = useLicensees(online)
   const [tab, setTab] = useState<Tab>('session')
   const [viewing, setViewing] = useState<Session | null>(null)
   const [startCourse, setStartCourse] = useState<Course | undefined>(undefined)
@@ -57,21 +68,28 @@ function CoachApp() {
   if (s && !s.endedAt) return <Timer store={store} session={s} sync={sync} />
 
   const go = (t: Tab) => { setViewing(null); setTab(t) }
+  // Séances partagées : celles des autres coachs sont visibles en lecture seule.
+  const isMine = (x: Session) => !x.coachId || x.coachId === user?.id
+  const mine = data.sessions.filter(isMine)
   let screen
   if (viewing)
     screen = (
       <Results
         session={viewing}
         onBack={() => setViewing(null)}
-        onEditMeta={async (patch) => {
-          await updateSessionMeta(viewing, patch)
-          setViewing({ ...viewing, ...patch })
-          data.refresh()
-        }}
+        onEditMeta={
+          isMine(viewing)
+            ? async (patch) => {
+                await updateSessionMeta(viewing, patch)
+                setViewing({ ...viewing, ...patch })
+                data.refresh()
+              }
+            : undefined
+        }
       />
     )
   else if (tab === 'history')
-    screen = <History courses={data.courses} sessions={data.sessions} loading={data.loading} source={data.source} onOpen={setViewing} onRefresh={data.refresh} />
+    screen = <History courses={data.courses} sessions={data.sessions} userId={user?.id} loading={data.loading} source={data.source} onOpen={setViewing} onRefresh={data.refresh} />
   else if (tab === 'courses')
     screen = (
       <Courses
@@ -106,7 +124,7 @@ function CoachApp() {
       <Profile
         user={user}
         group={store.roster}
-        sessions={data.sessions}
+        sessions={mine}
         onOpenSession={setViewing}
         onAllSessions={() => go('history')}
         onProfileSaved={data.refresh}
@@ -116,7 +134,7 @@ function CoachApp() {
     screen = s ? (
       <Results store={store} session={s} />
     ) : (
-      <Setup key={startCourse?.id ?? 'free'} store={store} user={user} courses={data.courses} initialCourse={startCourse} />
+      <Setup key={startCourse?.id ?? 'free'} store={store} user={user} courses={data.courses} initialCourse={startCourse} ffck={ffck} />
     )
 
   return (

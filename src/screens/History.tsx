@@ -1,10 +1,12 @@
-import { useMemo } from 'preact/hooks'
+import { useMemo, useState } from 'preact/hooks'
 import type { Course, Session } from '../core/model'
 import { summarize } from '../core/stats'
 import { SessionItem } from '../components/SessionItem'
 import { Icon } from '../components/Icon'
 
 interface Props {
+  /** Compte connecté : permet de séparer « Mes séances » des séances des autres coachs. */
+  userId?: string
   courses?: Course[]
   sessions: Session[]
   loading: boolean
@@ -14,7 +16,13 @@ interface Props {
 }
 
 /** Toutes les séances du coach, de la plus récente à la plus ancienne, regroupées par mois. */
-export function History({ courses = [], sessions, loading, source, onOpen, onRefresh }: Props) {
+export function History({ userId, courses = [], sessions: allSessions, loading, source, onOpen, onRefresh }: Props) {
+  const others = allSessions.some((x) => x.coachId && x.coachId !== userId)
+  const [scope, setScope] = useState<'mine' | 'all'>('mine')
+  const sessions = useMemo(
+    () => (scope === 'all' ? allSessions : allSessions.filter((x) => !x.coachId || x.coachId === userId)),
+    [allSessions, scope, userId]
+  )
   const months = useMemo(() => {
     const out: { label: string; items: ReturnType<typeof summarize>[] }[] = []
     for (const s of sessions) {
@@ -36,6 +44,12 @@ export function History({ courses = [], sessions, loading, source, onOpen, onRef
           </div>
           <button class="icon-btn" onClick={onRefresh} aria-label="Actualiser"><Icon name="undo" size={18} /></button>
         </header>
+        {others && (
+          <div class="segment n2 lic-scope" role="group" aria-label="Séances affichées" style={{ marginBottom: 6 }}>
+            <button class={scope === 'mine' ? 'on' : ''} aria-pressed={scope === 'mine'} onClick={() => setScope('mine')}>Mes séances</button>
+            <button class={scope === 'all' ? 'on' : ''} aria-pressed={scope === 'all'} onClick={() => setScope('all')}>Tous les coachs</button>
+          </div>
+        )}
         {source === 'local' && sessions.length > 0 && (
           <p class="note">Hors ligne : séances enregistrées sur ce téléphone.</p>
         )}
@@ -53,7 +67,13 @@ export function History({ courses = [], sessions, loading, source, onOpen, onRef
             <section key={m.label} class="month">
               <div class="sec-head"><h2>{m.label}</h2><span class="label">{m.items.length} séance{m.items.length > 1 ? 's' : ''}</span></div>
               <ul class="sess-list">
-                {m.items.map((sum) => <SessionItem key={sum.session.id} sum={sum} course={courses.find((c) => c.id === sum.session.courseId)?.name} onOpen={() => onOpen(sum.session)} />)}
+                {m.items.map((sum) => <SessionItem
+                    key={sum.session.id}
+                    sum={sum}
+                    course={courses.find((c) => c.id === sum.session.courseId)?.name}
+                    coach={sum.session.coachId && sum.session.coachId !== userId ? sum.session.coachName || 'Autre coach' : undefined}
+                    onOpen={() => onOpen(sum.session)}
+                  />)}
               </ul>
             </section>
           ))

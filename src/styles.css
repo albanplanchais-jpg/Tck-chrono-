@@ -748,3 +748,44 @@ a.btn { text-decoration: none; color: inherit; }
 .search { width: 100%; height: 48px; margin-bottom: 4px; border: 2px solid var(--g3); background: var(--g1); color: var(--white); font: 600 16px var(--font); padding: 0 14px; outline: none; }
 .search:focus { border-color: var(--white); }
 .empty-state .btn { width: 100%; }
+
+/* ——— Autocomplétion licenciés FFCK ——— */
+.lic { position: relative; }
+.lic-bar { display: flex; margin-top: 8px; }
+.lic-scope { flex: 1; }
+.lic-scope button { height: 40px; font-size: 13px; letter-spacing: .06em; }
+.lic-info { margin: 6px 0 0; font-size: 11px; color: var(--g4); }
+.lic-results { margin-top: 8px; border: 2px solid var(--white); background: var(--black); }
+.lic-results li + li { border-top: 1px solid var(--g3); }
+.lic-row { width: 100%; min-height: 58px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 12px; text-align: left; }
+.lic-row:active:not(:disabled) { background: var(--white); color: var(--black); }
+.lic-row:active:not(:disabled) small { color: #444; }
+.lic-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lic-main b { font-size: 17px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lic-main .caps { letter-spacing: .02em; }
+.lic-main small { font-size: 12px; color: var(--g4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lic-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.lic-side small { font-size: 12px; font-weight: 800; color: var(--g4); }
+.lic-side i { font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border: 1px solid var(--g4); color: var(--g4); padding: 1px 4px; white-space: nowrap; }
+.lic-row.added { opacity: .45; }
+.lic-row.manual b { font-size: 15px; }
+.lic-row.manual { background: var(--g1); }
+.lic-note { padding: 8px 12px; font-size: 12px; color: var(--g4); background: var(--g1); }
+.sess-coach { display: block; font-size: 11px; font-weight: 700; color: #bbb; }
+.res-coach { display: block; font-size: 13px; color: var(--g4); margin: 6px 0 2px; }
+
+/* ——— Espace athlète ——— */
+.tabbar.two { grid-template-columns: 1fr 1fr; }
+.role-pick button { height: 50px; font-size: 15px; }
+.note-btn { width: 100%; text-align: left; margin: 0 0 12px; padding: 12px 14px; border: 2px dashed var(--g3); font-size: 14px; line-height: 1.45; color: #ccc; }
+.note-btn b { color: var(--white); white-space: nowrap; }
+.lic-linked { margin: 12px 0 0; display: flex; flex-direction: column; gap: 4px; }
+.lic-linked b { font-size: 20px; }
+.lic-linked span { color: var(--g4); font-size: 14px; }
+.privacy { font-size: 14px; line-height: 1.5; color: #bbb; margin: 12px 0 0; }
+.statbox.tfirst { grid-template-columns: 1.4fr 1fr 1fr; }
+.statbox.tfirst b { font-size: 21px; }
+.lic-results { scroll-margin-bottom: 24px; }
+.rank-row > span:nth-child(2) { min-width: 0; overflow: hidden; }
+.rank-row .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rank-row { column-gap: 8px; }

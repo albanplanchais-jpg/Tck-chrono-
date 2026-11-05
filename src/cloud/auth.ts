@@ -26,11 +26,11 @@ export async function signIn(email: string, password: string) {
 }
 
 /** Renvoie true si le compte est actif tout de suite, false si un e-mail de confirmation a été envoyé. */
-export async function signUp(email: string, password: string, name: string): Promise<boolean> {
+export async function signUp(email: string, password: string, name: string, role: 'coach' | 'athlete' = 'coach'): Promise<boolean> {
   const { data, error } = await supabase!.auth.signUp({
     email: email.trim(),
     password,
-    options: { data: { name: name.trim() }, emailRedirectTo: location.origin }
+    options: { data: { name: name.trim(), role }, emailRedirectTo: location.origin }
   })
   if (error) throw error
   return !!data.session

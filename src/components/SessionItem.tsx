@@ -5,7 +5,7 @@ import { Icon } from './Icon'
 const MONTHS = ['JANV.', 'FÉVR.', 'MARS', 'AVR.', 'MAI', 'JUIN', 'JUIL.', 'AOÛT', 'SEPT.', 'OCT.', 'NOV.', 'DÉC.']
 
 /** Ligne « séance » : case date, titre, athlètes · passages, meilleur temps. */
-export function SessionItem({ sum, course, onOpen }: { sum: SessionSummary; course?: string; onOpen: () => void }) {
+export function SessionItem({ sum, course, coach, onOpen }: { sum: SessionSummary; course?: string; coach?: string; onOpen: () => void }) {
   const s = sum.session
   const d = new Date(s.createdAt)
   return (
@@ -23,6 +23,7 @@ export function SessionItem({ sum, course, onOpen }: { sum: SessionSummary; cour
             {!s.endedAt && ' · en cours'}
           </small>
           {s.comment && <i class="sess-comment">« {s.comment} »</i>}
+          {coach && <span class="sess-coach">par {coach}</span>}
         </span>
         <span class="sess-best">
           {sum.best ? (
