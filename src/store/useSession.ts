@@ -98,7 +98,7 @@ export function useSessionStore() {
 
   /** Titre, commentaire, chrono général. */
   const setMeta = useCallback(
-    (patch: Partial<Pick<Session, 'title' | 'comment' | 'general'>>) => setSession((s) => (s ? { ...s, ...patch } : s)),
+    (patch: Partial<Pick<Session, 'title' | 'comment' | 'general' | 'splits'>>) => setSession((s) => (s ? { ...s, ...patch } : s)),
     []
   )
 

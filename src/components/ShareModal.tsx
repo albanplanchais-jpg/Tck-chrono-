@@ -4,7 +4,7 @@ import { KIND_LABEL, type Kind } from '../core/model'
 import { frError, joinUrl, supabase } from '../cloud/supabase'
 import { Icon } from './Icon'
 
-interface Props { code: string; sessionId: string; splits: number; onClose: () => void }
+interface Props { code: string; sessionId: string; splits: number; onClose: () => void; /** Séance sans inter : en ajouter un si un chronométreur reçoit le droit INTER. */ onEnableSplits?: () => void }
 
 interface Timer { id: string; token: string; roles: Kind[]; name: string | null; last_seen: string | null }
 
@@ -58,14 +58,14 @@ const ago = (iso: string | null) => {
 }
 
 /** Partage de la séance : lien athlètes (suivi + inscription) et liens chronométreurs (droits limités). */
-export function ShareModal({ code, sessionId, splits, onClose }: Props) {
+export function ShareModal({ code, sessionId, splits, onClose, onEnableSplits }: Props) {
   const [tab, setTab] = useState<'athletes' | 'timers'>('athletes')
   const [timers, setTimers] = useState<Timer[]>([])
   const [roles, setRoles] = useState<Kind[]>(['finish'])
   const [shown, setShown] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const kinds: Kind[] = splits > 0 ? ['start', 'split', 'finish'] : ['start', 'finish']
+  const kinds: Kind[] = ['start', 'split', 'finish']
 
   const load = async () => {
     const { data, error } = await supabase!
@@ -90,6 +90,7 @@ export function ShareModal({ code, sessionId, splits, onClose }: Props) {
     if (!roles.length) return setError('Choisis au moins un droit.')
     setBusy(true)
     setError('')
+    if (roles.includes('split') && splits === 0) onEnableSplits?.()
     const token = newToken()
     const ordered = kinds.filter((k) => roles.includes(k))
     const { error } = await supabase!.from('session_timers').insert({ session_id: sessionId, token, roles: ordered })
@@ -168,6 +169,9 @@ export function ShareModal({ code, sessionId, splits, onClose }: Props) {
                 </button>
               ))}
             </div>
+            {splits === 0 && roles.includes('split') && (
+              <p class="form-msg">La séance n'a pas de chrono inter : un inter sera ajouté pour tout le monde.</p>
+            )}
             {error && <p class="form-msg err" role="alert">{error}</p>}
             <button class="btn primary" disabled={busy || !roles.length} onClick={create}>
               <Icon name="plus" size={20} />Créer le lien chronométreur

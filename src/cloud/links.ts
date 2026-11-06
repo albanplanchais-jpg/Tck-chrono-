@@ -14,6 +14,30 @@ const call = async <T>(fn: string, args?: Record<string, unknown>): Promise<T> =
 }
 
 export const findLicensee = (nom: string, prenom: string) => call<FoundLicensee[]>('find_licensee', { p_nom: nom.trim(), p_prenom: prenom.trim() })
+
+/** Jeton de la session connectée (pour la fonction /api/licensees). */
+export async function accessToken(): Promise<string | null> {
+  if (!supabase) return null
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token ?? null
+}
+
+/** Recherche dans le classement descente via la fonction Vercel (quand la base n'est pas encore remplie). */
+export async function findLicenseeApi(nom: string, prenom: string): Promise<FoundLicensee[]> {
+  const token = await accessToken()
+  if (!token) return []
+  const q = new URLSearchParams({ nom: nom.trim(), prenom: prenom.trim() })
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 15000)
+  try {
+    const r = await fetch(`/api/licensees?${q}`, { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal })
+    if (!r.ok || !/json/.test(r.headers.get('content-type') ?? '')) return []
+    const body = await r.json()
+    return Array.isArray(body?.rows) ? body.rows : []
+  } catch { return [] } finally { clearTimeout(t) }
+}
+export const claimLicenceListed = (l: FoundLicensee) =>
+  call<FoundLicensee[]>('claim_licence_listed', { p_licence: l.licence, p_nom: l.nom, p_prenom: l.prenom, p_club: l.club ?? '' })
 export const claimLicence = (licence: string, nom: string) => call<FoundLicensee[]>('claim_licence', { p_licence: licence.trim(), p_nom: nom.trim() })
 export const findAccounts = (q: string) => call<Account[]>('find_accounts', { p_q: q.trim() })
 export const requestLink = (id: string) => call<'pending' | 'accepted'>('request_link', { p_other: id })

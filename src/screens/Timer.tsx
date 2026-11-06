@@ -333,7 +333,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
         </button>
       )}
 
-      {shareOpen && session.code && <ShareModal code={session.code} sessionId={session.id} splits={splits} onClose={() => setShareOpen(false)} />}
+      {shareOpen && session.code && <ShareModal code={session.code} sessionId={session.id} splits={splits} onClose={() => setShareOpen(false)} onEnableSplits={() => store.setMeta({ splits: 1 })} />}
 
       {infoOpen && (
         <SessionInfo

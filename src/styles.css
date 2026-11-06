@@ -1141,24 +1141,50 @@ a.btn { text-decoration: none; color: inherit; }
     0 10px 28px rgba(0,0,0,.55);
   transition: transform 320ms cubic-bezier(.34, 1.56, .5, 1), opacity 180ms, left 0ms;
 }
-.tabbar.pressing .tab-lens { opacity: 1; transform: translateX(-50%) scale(1); transition: transform 380ms cubic-bezier(.34, 1.56, .5, 1), opacity 120ms, left 90ms cubic-bezier(.2, .8, .2, 1); }
+.tabbar[data-state="pressing"] .tab-lens { opacity: 1; transform: translateX(-50%) scale(1); transition: transform 380ms cubic-bezier(.34, 1.56, .5, 1), opacity 120ms, left 90ms cubic-bezier(.2, .8, .2, 1); }
 /* Relâché : la bulle glisse au centre de l'onglet, rétrécit et se fond dans la pastille. */
-.tabbar.settling .tab-lens {
+.tabbar[data-state="settling"] .tab-lens {
   opacity: 0; top: 4px; height: calc(100% - 8px); width: calc((100% - 8px) / var(--n, 5));
   transform: translateX(-50%) scale(1);
   transition: left 300ms cubic-bezier(.34, 1.3, .5, 1), top 300ms, height 300ms, width 300ms, opacity 380ms ease-in;
 }
 /* La pastille de repos se cache pendant l'appui et réapparaît sous l'onglet choisi (sans glisser). */
-.tabbar.pressing::before { opacity: 0; transition: opacity 120ms; }
-.tabbar.settling::before { transition: opacity 300ms 120ms; }
-.tabbar.pressing::before, .tabbar.settling::before { transition-property: opacity; }
+.tabbar[data-state="pressing"]::before { opacity: 0; transition: opacity 120ms; }
+.tabbar[data-state="settling"]::before { transition: opacity 300ms 120ms; }
+.tabbar[data-state="pressing"]::before, .tabbar[data-state="settling"]::before { transition-property: opacity; }
 .tabbar button { position: relative; z-index: 3; }
 .tabbar button svg, .tabbar button span { transition: transform 260ms cubic-bezier(.34, 1.56, .5, 1); }
-.tabbar.pressing button.lit { color: var(--white); }
-.tabbar.pressing button.lit svg { transform: scale(1.22) translateY(-2px); }
-.tabbar.pressing button.lit span { transform: scale(1.12) translateY(1px); }
+.tabbar[data-state="pressing"] button[data-lit] { color: var(--white); }
+.tabbar[data-state="pressing"] button[data-lit] svg { transform: scale(1.22) translateY(-2px); }
+.tabbar[data-state="pressing"] button[data-lit] span { transform: scale(1.12) translateY(1px); }
 .tabbar button:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .tab-lens { display: none; }
-  .tabbar.pressing::before { opacity: 1; }
+  .tabbar[data-state="pressing"]::before { opacity: 1; }
+}
+
+/* ——— Boutons DÉP / INT / ARR un peu plus gros ——— */
+.rows-head, .rows li { grid-template-columns: minmax(0, 1fr) 80px repeat(var(--k), 56px); }
+.rows li { height: 60px; }
+.act, .rows.n1 .act { height: 50px; font-size: 13px; }
+.rows.n3 .act { font-size: 12px; }
+.rows.dense li { height: 42px; }
+.rows.dense .act { height: 36px; font-size: 12px; }
+.board.crowded .rows.dense li { height: 32px; }
+.board.crowded .rows.dense .act { height: 30px; }
+@media (max-width: 360px) {
+  .rows-head, .rows li { grid-template-columns: minmax(0, 1fr) 72px repeat(var(--k), 50px); }
+}
+
+/* Stabilité : pas de sélection / loupe iOS, la pastille ne bouge qu'au repos. */
+.tabbar, .tabbar * { -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.tabbar[data-state]::before { transition: opacity 200ms; }
+.crash { justify-content: center; align-items: center; text-align: center; gap: 14px; }
+.crash h1 { font-size: 30px; }
+.crash p { margin: 0; color: #ccc; font-size: 16px; line-height: 1.45; }
+.crash small { color: var(--g4); font-size: 11px; word-break: break-word; }
+.rows-head.n2, .rows.n2 li { grid-template-columns: minmax(0, 1fr) 90px repeat(2, 68px); }
+.rows-head.n3, .rows.n3 li { grid-template-columns: minmax(0, 1fr) 72px repeat(3, 52px); gap: 5px; }
+@media (max-width: 360px) {
+  .rows-head.n3, .rows.n3 li { grid-template-columns: minmax(0, 1fr) 66px repeat(3, 48px); gap: 4px; }
 }

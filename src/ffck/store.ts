@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'preact/hooks'
 import { get, set } from 'idb-keyval'
 import { gunzipSync, strFromU8 } from 'fflate'
 import { supabase } from '../cloud/supabase'
+import { accessToken } from '../cloud/links'
 import { buildIndex, type Licensee } from './search'
 
 /**
@@ -43,6 +44,36 @@ export async function loadLocal(): Promise<Stored | undefined> {
   try { return await get<Stored>(KEY) } catch { return undefined }
 }
 
+/**
+ * Secours : liste tirée du classement en direct (fonction Vercel /api/licensees), quand le fichier
+ * de nuit n'est pas encore publié. Réservé aux coachs validés (vérifié côté serveur). Gardée 1 jour.
+ */
+async function fromApi(current: Stored | undefined, onStatus?: (s: FfckStatus) => void): Promise<Stored | undefined> {
+  const today = new Date().toISOString().slice(0, 10)
+  if (current?.version === `api-${today}`) return onStatus?.('ok'), current
+  const token = await accessToken()
+  if (!token) return current
+  try {
+    onStatus?.('downloading')
+    const r = await fetch('/api/licensees?all=1', { headers: { Authorization: `Bearer ${token}` } })
+    if (r.status === 403) return onStatus?.('forbidden'), current
+    if (!r.ok || !/json/.test(r.headers.get('content-type') ?? '')) return onStatus?.('missing'), current
+    const body = await r.json()
+    const rows: Licensee[] = (Array.isArray(body?.rows) ? body.rows : []).map((x: any) => ({
+      licence: String(x.licence), nom: String(x.nom), prenom: String(x.prenom),
+      club: x.club || undefined, categorie: x.categorie || undefined, embarcation: x.embarcation || undefined, active: true
+    }))
+    if (!rows.length) return onStatus?.('missing'), current
+    const stored: Stored = { version: `api-${today}`, count: rows.length, rows, checkedAt: Date.now() }
+    await set(KEY, stored).catch(() => {})
+    onStatus?.('ok')
+    return stored
+  } catch {
+    onStatus?.('error')
+    return current
+  }
+}
+
 /** Vérifie en ligne et met à jour si besoin. Ne remplace jamais la copie locale par un fichier douteux. */
 export async function checkForUpdate(current?: Stored, onStatus?: (s: FfckStatus) => void): Promise<Stored | undefined> {
   if (!supabase) return current
@@ -52,7 +83,10 @@ export async function checkForUpdate(current?: Stored, onStatus?: (s: FfckStatus
   if (metaRes.error) {
     // 400/403 : compte non validé comme coach ; 404 : pas encore de fichier publié.
     const m = `${(metaRes.error as any).statusCode ?? ''} ${metaRes.error.message}`
-    onStatus?.(/not.?found|404/i.test(m) ? 'missing' : /403|400|unauthori|denied|policy/i.test(m) ? 'forbidden' : 'error')
+    const st: FfckStatus = /not.?found|404/i.test(m) ? 'missing' : /403|400|unauthori|denied|policy/i.test(m) ? 'forbidden' : 'error'
+    onStatus?.(st)
+    // Pas encore de fichier publié (ou erreur) : liste du classement en direct.
+    if (st !== 'forbidden') return fromApi(current, onStatus)
     return current
   }
   const meta = JSON.parse(await metaRes.data.text()) as Meta

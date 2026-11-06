@@ -1,13 +1,14 @@
 import { useState } from 'preact/hooks'
 import { frError } from '../cloud/supabase'
-import { claimLicence, findLicensee, type FoundLicensee } from '../cloud/links'
+import { claimLicence, claimLicenceListed, findLicensee, findLicenseeApi, type FoundLicensee } from '../cloud/links'
 
 /** « Retrouve-toi » : l'athlète tape son nom et son prénom, choisit sa ligne, et son compte est relié à sa licence. */
 export function FindMe({ defaultName, onLinked }: { defaultName?: string | null; onLinked: (msg: string) => void }) {
-  const parts = (defaultName ?? '').trim().split(/\s+/)
-  const [prenom, setPrenom] = useState(parts.length > 1 ? parts.slice(0, -1).join(' ') : '')
-  const [nom, setNom] = useState(parts.length > 1 ? parts[parts.length - 1] : '')
-  const [found, setFound] = useState<FoundLicensee[] | null>(null)
+  // Prénom = premier mot, nom = le reste (« Loig Le Guennec » → Loig / Le Guennec).
+  const parts = (defaultName ?? '').trim().split(/\s+/).filter(Boolean)
+  const [prenom, setPrenom] = useState(parts.length > 1 ? parts[0] : '')
+  const [nom, setNom] = useState(parts.length > 1 ? parts.slice(1).join(' ') : '')
+  const [found, setFound] = useState<(FoundLicensee & { api?: boolean })[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [manual, setManual] = useState(false)
@@ -16,13 +17,22 @@ export function FindMe({ defaultName, onLinked }: { defaultName?: string | null;
   const search = async (e: Event) => {
     e.preventDefault()
     setBusy(true); setErr(''); setFound(null)
-    try { setFound(await findLicensee(nom, prenom)) } catch (x) { setErr(frError(x as any)) }
+    // 1. Base (synchro de nuit) ; 2. sinon, classement en direct via la fonction Vercel.
+    let rows: (FoundLicensee & { api?: boolean })[] = []
+    let failed: unknown = null
+    try { rows = await findLicensee(nom, prenom) } catch (x) { failed = x }
+    if (!rows.length) {
+      const api = await findLicenseeApi(nom, prenom)
+      rows = api.map((l) => ({ ...l, api: true }))
+    }
+    if (!rows.length && failed && !/introuvable|Indique/i.test(String((failed as any)?.message))) setErr(frError(failed as any))
+    setFound(rows)
     setBusy(false)
   }
-  const claim = async (lic: string, n: string) => {
+  const claim = async (lic: string, n: string, listed?: FoundLicensee) => {
     setBusy(true); setErr('')
     try {
-      const l = (await claimLicence(lic, n))[0]
+      const l = (listed ? await claimLicenceListed(listed) : await claimLicence(lic, n))[0]
       onLinked(`Compte relié à ${l.prenom} ${l.nom}${l.club ? ` (${l.club})` : ''}.`)
     } catch (x) { setErr(frError(x as any)) }
     setBusy(false)
@@ -46,7 +56,7 @@ export function FindMe({ defaultName, onLinked }: { defaultName?: string | null;
 
       {found && !found.length && (
         <p class="muted find-none">
-          Personne à ce nom. Vérifie l'orthographe du nom de famille (complet). Seuls les licenciés déjà classés en descente sont dans la liste.
+          Personne à ce nom. Vérifie l'orthographe du nom de famille (en entier). Seuls les licenciés classés en descente sont dans la liste : sinon, relie-toi avec ton numéro de licence.
         </p>
       )}
       {found && found.length > 0 && (
@@ -57,7 +67,7 @@ export function FindMe({ defaultName, onLinked }: { defaultName?: string | null;
                 <b>{l.prenom} {l.nom}</b>
                 <small>{[l.club, l.categorie].filter(Boolean).join(' · ')}</small>
               </span>
-              <button class="pill solid" disabled={busy} onClick={() => claim(l.licence, l.nom)}>C'est moi</button>
+              <button class="pill solid" disabled={busy} onClick={() => claim(l.licence, l.nom, l.api ? l : undefined)}>C'est moi</button>
             </li>
           ))}
         </ul>

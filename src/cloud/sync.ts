@@ -45,10 +45,25 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
     return () => window.removeEventListener('online', on)
   }, [enabled])
 
-  const push = async () => {
+  // Un seul envoi à la fois : un envoi plus ancien ne doit jamais arriver après un plus récent.
+  const sending = useRef(false)
+  const push = async (): Promise<void> => {
+    if (sending.current) return
+    sending.current = true
+    let ok = false
+    try { ok = await pushOnce() } catch { dirty.current = true; setState(navigator.onLine ? 'error' : 'offline') }
+    finally { sending.current = false }
+    // Modifié pendant un envoi réussi : on renvoie la dernière version tout de suite
+    // (en cas d'échec, le nouvel essai se fait toutes les 10 s).
+    if (ok && dirty.current && navigator.onLine && latest.current?.code) {
+      clearTimeout(timer.current)
+      timer.current = window.setTimeout(push, 300)
+    }
+  }
+  const pushOnce = async (): Promise<boolean> => {
     const s = latest.current
-    if (!supabase || !s?.code || !dirty.current) return
-    if (!navigator.onLine) return setState('offline')
+    if (!supabase || !s?.code || !dirty.current) return true
+    if (!navigator.onLine) { setState('offline'); return false }
     dirty.current = false
     const row: Record<string, unknown> = {
       id: s.id,
@@ -81,7 +96,10 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
     if (error) {
       dirty.current = true
       setState(navigator.onLine ? 'error' : 'offline')
-    } else if (!dirty.current) setState('ok')
+      return false
+    }
+    if (!dirty.current) setState('ok')
+    return true
   }
 
   // Chaque modification → envoi groupé 500 ms plus tard.
@@ -97,9 +115,12 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
   useEffect(() => {
     if (!enabled) return
     const retry = () => dirty.current && push()
+    // App mise en arrière-plan (iOS peut la fermer) : on envoie tout de suite.
+    const hide = () => document.visibilityState === 'hidden' && retry()
     window.addEventListener('online', retry)
+    document.addEventListener('visibilitychange', hide)
     const i = setInterval(retry, 10000)
-    return () => { window.removeEventListener('online', retry); clearInterval(i) }
+    return () => { window.removeEventListener('online', retry); document.removeEventListener('visibilitychange', hide); clearInterval(i) }
   }, [enabled])
 
   // Athlètes inscrits par le lien (séance en cours uniquement).
@@ -108,8 +129,13 @@ export function useCloudSync(session: Session | undefined, enabled: boolean, han
   useEffect(() => {
     if (!active || !supabase || !sid) return
     let stop = false
+    let busy = false
     const poll = async () => {
-      if (!navigator.onLine) return
+      if (!navigator.onLine || busy) return
+      busy = true
+      try { await pollOnce() } catch { /* réseau : nouvel essai au prochain tour */ } finally { busy = false }
+    }
+    const pollOnce = async () => {
       // Repli si la migration 0003 (colonne bib) n'est pas encore passée.
       let { data, error } = await supabase!.from('session_joins').select('id,name,bib').eq('session_id', sid).order('created_at')
       if (error) ({ data } = await supabase!.from('session_joins').select('id,name').eq('session_id', sid).order('created_at') as any)

@@ -27,6 +27,16 @@ Adaptateur `scripts/ffck-sync/sources/classement.mjs` pour le site indépendant 
   `CLASSEMENT_RANKING_URL` (avec `{id}`).
 - Même politesse et mêmes garde-fous que les autres sources (1,5 s entre requêtes, arrêt sans publier si la structure change).
 
+## Secours en direct : fonction Vercel `api/licensees.js`
+Tant que la synchro de nuit n'a rien publié (ou si un athlète n'est pas encore dans la base), l'app interroge
+le classement **à travers une fonction Vercel** (le site du classement n'autorise pas les appels directs depuis un navigateur).
+- Toujours avec le jeton Supabase de la personne connectée : aucune réponse à un inconnu, rien d'indexable (`noindex`, `no-store`).
+- « Retrouve-toi » : nom de famille complet + 2 lettres du prénom, 5 résultats au plus.
+- Liste complète (autocomplétion de la séance) : **coachs validés uniquement** (`is_approved_coach`).
+- Liste d'opposition appliquée (`filter_opposed`). Données gardées 6 h en mémoire : 3 requêtes polies vers le site au plus.
+- Une licence trouvée ainsi est reliée au profil (`claim_licence_listed`) sans être ajoutée à la table `licensees`.
+- Utilise `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` déjà présents sur Vercel : rien à configurer.
+
 ## Où sont les données (RGPD — beaucoup de licenciés sont mineurs)
 - Table `licensees` et fichier `licencies.json.gz` dans un **bucket Supabase privé** (`ffck`) : jamais publics, jamais indexables.
 - Le fichier n'est téléchargeable **que par les coachs validés** (table `coach_approvals`). Un compte créé librement n'y a pas accès.
