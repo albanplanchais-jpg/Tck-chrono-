@@ -63,3 +63,11 @@ src/device/     wake lock, bip/vibration, partage
 - V1.1 (fait) : chrono inter (0–3 par passage), départ/arrivée groupés, journal pour réattribuer, affichage dense 15+ athlètes
 - V1.5 : compte coach (code par e‑mail) + synchro Supabase + historique
 - V2 : deux téléphones synchronisés (départ / arrivée)
+
+## Site vitrine et adresses
+- `/` : **site vitrine** (dossier `landing/`, Next.js en export statique) — c'est la page que trouvent les moteurs de recherche.
+- `/app` : **l'application** (fichier `app.html`, non indexé) ; `/s/CODE` (athlètes) et `/t/JETON` (chronométreurs) ouvrent aussi l'app.
+- L'app installée sur l'écran d'accueil démarre sur `/app` ; un ancien raccourci qui ouvre `/` est renvoyé vers l'app.
+- `npm run build` construit l'app puis le site vitrine et les réunit dans `dist/` (`npm run build:app` : l'app seule).
+- Textes du site vitrine : voir `landing/README.md`.
+

@@ -30,7 +30,7 @@ export async function signUp(email: string, password: string, name: string, role
   const { data, error } = await supabase!.auth.signUp({
     email: email.trim(),
     password,
-    options: { data: { name: name.trim(), role }, emailRedirectTo: location.origin }
+    options: { data: { name: name.trim(), role }, emailRedirectTo: `${location.origin}/app` }
   })
   if (error) throw error
   return !!data.session
@@ -41,6 +41,6 @@ export async function signOut() {
 }
 
 export async function resetPassword(email: string) {
-  const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: location.origin })
+  const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${location.origin}/app` })
   if (error) throw error
 }

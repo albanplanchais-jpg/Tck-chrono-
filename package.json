@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-landing.mjs",
+    "build:app": "vite build",
     "preview": "vite preview --host",
     "test": "vitest run",
     "icons": "node scripts/icons.mjs"
