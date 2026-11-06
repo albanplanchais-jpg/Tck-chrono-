@@ -182,7 +182,7 @@ export function Timer({ store, session, sync = 'off' }: { store: Store; session:
   const passages = results.reduce((n, r) => n + r.runs.length, 0)
 
   return (
-    <div class="screen timer board">
+    <div class={`screen timer board ${results.length > 10 ? 'crowded' : ''}`}>
       <header class="t-head px">
         <div class={`live-chip ${sync}`} title={SYNC_LABEL[sync] || 'Séance en cours'}>
           <span class="pulse" aria-hidden="true" />
