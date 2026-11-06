@@ -16,12 +16,15 @@ L'ajout à la main reste toujours possible. La liste est gardée sur le téléph
 
 ## Source « classement descente » (en attendant l'export FFCK)
 Adaptateur `scripts/ffck-sync/sources/classement.mjs` pour le site indépendant *classements-descente.plargentanck.fr*
-(liste des classements puis athlètes de chaque classement : prénom, NOM, club, catégorie ; embarcation déduite de la catégorie).
+(API vérifiée le 06/11/2026 : `GET /ranking/list` puis `GET /ranking/{code_liste}?limit=500&offset=…`).
 - **À n'activer qu'avec l'accord de l'auteur du site** (ce n'est pas la FFCK, l'accord fédéral ne le couvre pas).
-- Pas de n° de licence : identifiant stable `CL-…` calculé à partir du nom, du prénom et du club (homonymes du même club confondus).
-  Le lien « compte athlète ↔ licence » ne fonctionne donc pas avec cette source.
-- Réglages : `FFCK_SOURCE=classement`, `CLASSEMENT_RANKING_URL` (adresse des athlètes d'un classement, avec `{id}`, à confirmer
-  dans l'onglet Réseau du navigateur), `CLASSEMENT_LIST_URL` (défaut `…/ranking/list`), `CLASSEMENT_MAX` (défaut 80 classements).
+- Lit **uniquement la dernière édition** du classement national descente (≈ 1 100 athlètes classés, 3 requêtes par nuit).
+- Le **n° de licence** est tiré de `code_bateau` (`C1D423135` → `423135`) ; un biplace (`C2…`) donne deux licenciés.
+  Le lien « compte athlète ↔ licence » fonctionne donc avec cette source.
+- Seuls les athlètes **classés** (au moins une course nationale) y figurent : les débutants sont à ajouter à la main.
+- Champs gardés : licence, nom, prénom, club, catégorie (`C1DU15`…), embarcation. Points, rang, nb de courses ignorés.
+- Réglages : `FFCK_SOURCE=classement` suffit. Facultatif : `CLASSEMENT_API` (adresse de base), `CLASSEMENT_LIST_URL`,
+  `CLASSEMENT_RANKING_URL` (avec `{id}`).
 - Même politesse et mêmes garde-fous que les autres sources (1,5 s entre requêtes, arrêt sans publier si la structure change).
 
 ## Où sont les données (RGPD — beaucoup de licenciés sont mineurs)

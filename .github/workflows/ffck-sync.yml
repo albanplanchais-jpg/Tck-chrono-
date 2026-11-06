@@ -49,7 +49,7 @@ jobs:
           # Source « classement » (site indépendant, uniquement avec l'accord de son auteur)
           CLASSEMENT_LIST_URL: ${{ secrets.CLASSEMENT_LIST_URL }}
           CLASSEMENT_RANKING_URL: ${{ secrets.CLASSEMENT_RANKING_URL }}
-          CLASSEMENT_MAX: ${{ secrets.CLASSEMENT_MAX }}
+          CLASSEMENT_API: ${{ secrets.CLASSEMENT_API }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           # Exécution planifiée : seulement à 4 h, heure de Paris.
           FFCK_ONLY_AT_PARIS_HOUR: ${{ github.event_name == 'schedule' && '4' || '' }}
