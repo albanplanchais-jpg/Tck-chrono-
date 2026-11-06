@@ -33,7 +33,7 @@ export function Setup({ store, user, courses = [], initialCourse, ffck, sessions
   const [title, setTitle] = useState('')
   const [comment, setComment] = useState('')
   const [showMeta, setShowMeta] = useState(false)
-  const [mode, setMode] = useState<SessionMode>('classic')
+  const [mode, setMode] = useState<SessionMode | null>(null)
   // Poursuite : séance de référence et ordre / décalages calculés.
   const [fromId, setFromId] = useState<string | null>(null)
   const [plan, setPlan] = useState<PursuitEntry[]>([])
@@ -62,7 +62,7 @@ export function Setup({ store, user, courses = [], initialCourse, ffck, sessions
           refs: Object.fromEntries(plan.map((e) => [e.athlete.id, e.ref]))
         }
       })
-    } else store.start(list, splits, title, comment, courseId, { mode })
+    } else store.start(list, splits, title, comment, courseId, { mode: mode ?? 'classic' })
   }
   const canStart = mode === 'pursuit' ? plan.length >= 1 : !!list.length || cloudEnabled
   const [courseId, setCourseId] = useState<string | undefined>(initialCourse?.id)
@@ -86,32 +86,49 @@ export function Setup({ store, user, courses = [], initialCourse, ffck, sessions
   const myClub = ((user?.user_metadata?.club as string) || 'Torcy Canoë-Kayak').trim()
   const recents = store.roster.filter((a) => !has(a.name))
 
+  if (!mode)
+    return (
+      <div class="screen setup">
+        <div class="scroll px">
+          {onBack && (
+            <button class="back" onClick={onBack}><Icon name="left" size={18} stroke={2.6} />Accueil</button>
+          )}
+          <header class="head brand">
+            <div>
+              <span class="label">{fmtDay(Date.now())}{initialCourse ? ` · ${initialCourse.name}` : ''}</span>
+              <h1>Quel type de séance ?</h1>
+            </div>
+            <img src="/logo.png" alt="Torcy Canoë-Kayak" width={72} height={72} />
+          </header>
+          <div class="mode-cards">
+            {MODES.map((m) => (
+              <button key={m.id} class="mode-card" onClick={() => setMode(m.id)}>
+                <ModeArt mode={m.id} />
+                <span class="mc-text">
+                  <b>{MODE_LABEL[m.id]}</b>
+                  <small>{m.help}</small>
+                </span>
+                <Icon name="right" size={20} />
+              </button>
+            ))}
+          </div>
+          <div style={{ height: 24 }} />
+        </div>
+      </div>
+    )
+
   return (
     <div class="screen setup">
       <div class="scroll px">
-        {onBack && (
-          <button class="back" onClick={onBack}><Icon name="left" size={18} stroke={2.6} />Accueil</button>
-        )}
+        <button class="back" onClick={() => setMode(null)}><Icon name="left" size={18} stroke={2.6} />Type de séance</button>
         <header class="head brand">
           <div>
             <span class="label">{fmtDay(Date.now())}</span>
-            <h1>Nouvelle séance</h1>
+            <h1>{MODE_LABEL[mode]}</h1>
           </div>
           <img src="/logo.png" alt="Torcy Canoë-Kayak" width={72} height={72} />
         </header>
-
-        <div class="segment n3 mode-pick" role="group" aria-label="Type de séance">
-          {(['classic', 'mass', 'pursuit'] as SessionMode[]).map((m) => (
-            <button key={m} class={mode === m ? 'on' : ''} aria-pressed={mode === m} onClick={() => setMode(m)}>{MODE_LABEL[m]}</button>
-          ))}
-        </div>
-        <p class="mode-help">
-          {mode === 'classic'
-            ? 'Chacun part quand tu touches son DÉP (seul ou par vagues).'
-            : mode === 'mass'
-              ? 'Tout le monde part en même temps : un seul toucher sur le logo donne le départ.'
-              : 'Le plus lent part en premier, chacun avec son écart de temps : le premier arrivé gagne. Départs donnés automatiquement.'}
-        </p>
+        <p class="mode-help">{MODES.find((m) => m.id === mode)!.help}</p>
 
         {hint && (
           <div class="banner">
@@ -191,7 +208,13 @@ export function Setup({ store, user, courses = [], initialCourse, ffck, sessions
             </p>
           </div>
         ) : (
-          <StartOrder athletes={list} onChange={setList} onRemove={(id) => setList((l) => l.filter((x) => x.id !== id))} />
+          <StartOrder
+            athletes={list}
+            onChange={setList}
+            onRemove={(id) => setList((l) => l.filter((x) => x.id !== id))}
+            noWaves={mode === 'mass'}
+            title={mode === 'mass' ? 'Au départ' : 'Ordre de départ'}
+          />
         )}
 
         {recents.length > 0 && (
@@ -244,5 +267,29 @@ export function Setup({ store, user, courses = [], initialCourse, ffck, sessions
         </button>
       </footer>
     </div>
+  )
+}
+
+const MODES: { id: SessionMode; help: string }[] = [
+  { id: 'classic', help: 'Chacun part quand tu touches son DÉP, seul ou par vagues.' },
+  { id: 'mass', help: 'Tout le monde part ensemble : un seul toucher donne le départ.' },
+  { id: 'pursuit', help: "Le plus lent part en premier avec son écart : le premier arrivé gagne." }
+]
+
+/** Petit schéma : 3 couloirs, départs (ronds) et arrivée (trait) selon le mode. */
+function ModeArt({ mode }: { mode: SessionMode }) {
+  const starts = mode === 'classic' ? [8, 26, 44] : mode === 'mass' ? [8, 8, 8] : [8, 20, 34]
+  const ends = mode === 'classic' ? [52, 70, 88] : mode === 'mass' ? [70, 84, 62] : [88, 88, 88]
+  return (
+    <svg class="mode-art" viewBox="0 0 100 60" aria-hidden="true">
+      {[14, 30, 46].map((y, i) => (
+        <g key={y}>
+          <line x1="4" y1={y} x2="96" y2={y} stroke="currentColor" stroke-opacity=".18" stroke-width="2" stroke-linecap="round" />
+          <line x1={starts[i]} y1={y} x2={ends[i]} y2={y} stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+          <circle cx={starts[i]} cy={y} r="4.5" fill="currentColor" />
+        </g>
+      ))}
+      {mode !== 'classic' && <line x1={mode === 'mass' ? 8 : 88} y1="5" x2={mode === 'mass' ? 8 : 88} y2="55" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3" />}
+    </svg>
   )
 }

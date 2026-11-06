@@ -1046,3 +1046,74 @@ a.btn { text-decoration: none; color: inherit; }
 .links .search { margin-top: 14px; border: 0; border-radius: 18px; background: var(--glass); box-shadow: var(--glass-edge); padding: 0 16px; }
 .login-form input, .join input { border: 0; border-radius: 16px; background: var(--glass); box-shadow: var(--glass-edge); }
 .login-form input:focus, .join input:focus, .links .search:focus, .field input:focus { box-shadow: var(--glass-edge), inset 0 0 0 2px var(--white); }
+
+/* ——— Choix du type de séance : 3 gros boutons ——— */
+.mode-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+.mode-card {
+  width: 100%; min-height: 128px; padding: 16px 16px 16px 14px; display: grid; grid-template-columns: 104px minmax(0, 1fr) 20px; gap: 14px; align-items: center; text-align: left;
+  border-radius: 28px; background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-edge), var(--glass-shadow);
+  transition: transform 160ms var(--ease);
+}
+.mode-card:active { transform: scale(.97); }
+.mode-card:first-child { background: linear-gradient(180deg, #fff, #ececef); color: var(--black); box-shadow: var(--clear-edge); }
+.mode-card:first-child small { color: #444; }
+.mode-card .mode-art { width: 104px; height: 64px; }
+.mc-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mc-text b { font-size: 26px; font-weight: 900; letter-spacing: -.01em; line-height: 1.05; }
+.mc-text small { font-size: 14px; line-height: 1.4; color: #bbb; }
+.mode-badge { width: 84px; height: 60px; display: grid; place-items: center; border-radius: 20px; background: var(--glass); box-shadow: var(--glass-edge); }
+.mode-badge .mode-art { width: 64px; height: 40px; }
+
+/* ——— Parcours : cartes visuelles ——— */
+.course-cards { display: flex; flex-direction: column; gap: 12px; }
+.course-card {
+  width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 16px; text-align: left; border-radius: 28px;
+  background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-edge), var(--glass-shadow);
+  transition: transform 160ms var(--ease);
+}
+.course-card:active { transform: scale(.98); }
+.cc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.cc-top > svg { color: var(--g4); margin-top: 4px; }
+.cc-name { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cc-name b { font-size: 22px; font-weight: 900; line-height: 1.1; }
+.cc-name small { font-size: 13px; color: var(--g4); font-weight: 700; }
+.track-art { width: 100%; height: 44px; display: block; color: var(--white); }
+.track-art.big { height: 70px; }
+.track-art .ta-t { font: 800 9px var(--mono); fill: currentColor; letter-spacing: .04em; }
+.cc-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: end; }
+.cc-rec { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cc-rec small { font-size: 12px; font-weight: 700; color: var(--g4); }
+.cc-rec b { font-size: 28px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+.cc-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ddd !important; }
+.cc-num { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 64px; height: 56px; border-radius: 18px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.14); }
+.cc-num b { font-size: 20px; font-weight: 800; line-height: 1; }
+.cc-num small { font-size: 11px; font-weight: 700; color: var(--g4); margin-top: 3px; }
+
+.course-hero { margin-bottom: 12px; padding: 14px 14px 10px; border-radius: 26px; background: var(--glass); box-shadow: var(--glass-edge); }
+.ch-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; }
+
+/* Podium */
+.podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 8px; align-items: end; margin-top: 12px; }
+.pod { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; text-align: center; }
+.pod.empty { height: 1px; }
+.pod-name { font-size: 14px; font-weight: 800; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
+.pod-name .bibn { margin-right: 5px; }
+.pod-time { font-size: 16px; font-weight: 800; }
+.pod-gap { font-size: 12px; color: var(--g4); }
+.pod-step { width: 100%; display: grid; place-items: center; margin-top: 4px; border-radius: 18px 18px 8px 8px; background: var(--glass); box-shadow: var(--glass-edge); }
+.pod-step b { font-size: 34px; font-weight: 900; }
+.pod.p1 .pod-step { height: 104px; background: linear-gradient(180deg, #fff, #e6e6ea); color: var(--black); box-shadow: var(--clear-edge); }
+.pod.p1 .pod-time { font-size: 19px; }
+.pod.p2 .pod-step { height: 76px; }
+.pod.p3 .pod-step { height: 56px; }
+
+/* Progression */
+.progress-card { margin-top: 12px; padding: 12px 12px 10px; border-radius: 24px; background: var(--glass); box-shadow: var(--glass-edge); }
+.progress { width: 100%; height: auto; display: block; overflow: visible; }
+.pg-line { fill: none; stroke: var(--white); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.pg-area { fill: rgba(255,255,255,.08); }
+.pg-rec { stroke: var(--white); stroke-opacity: .45; stroke-width: 1; stroke-dasharray: 4 4; }
+.pg-dot { fill: var(--black); stroke: var(--white); stroke-width: 2; }
+.pg-dot.rec { fill: var(--white); }
+.pg-t { font: 700 11px var(--font); fill: var(--g4); }
+.pg-legend { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: #ccc; }

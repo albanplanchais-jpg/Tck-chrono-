@@ -9,13 +9,17 @@ interface Props {
   onRemove?: (id: string) => void
   /** Athlètes déjà partis : leur place ne compte plus, on les signale. */
   started?: Set<string>
+  /** Mass start : tout le monde part ensemble, pas de vagues. */
+  noWaves?: boolean
+  /** Titre de la liste (« Ordre de départ » par défaut). */
+  title?: string
 }
 
 /**
  * Ordre de départ : dossards, ordre du premier au dernier (▲▼ ou tri par dossard),
  * et vagues (« part avec… ») pour faire partir plusieurs athlètes ensemble.
  */
-export function StartOrder({ athletes, onChange, onRemove, started }: Props) {
+export function StartOrder({ athletes, onChange, onRemove, started, noWaves, title = 'Ordre de départ' }: Props) {
   const [pickFor, setPickFor] = useState<string | null>(null)
   // Mode simple par défaut : dossard, nom, ✕ et glisser. « Vagues » montre départs groupés et flèches.
   const [advanced, setAdvanced] = useState(false)
@@ -57,12 +61,14 @@ export function StartOrder({ athletes, onChange, onRemove, started }: Props) {
   return (
     <div class="order">
       <div class="order-tools">
-        <span class="label white">Ordre de départ · {athletes.length}</span>
+        <span class="label white">{title} · {athletes.length}</span>
         <span class="tools-r">
           <button class="pill outline" onClick={() => onChange(sortByBib(athletes))} disabled={athletes.length < 2}>Trier n°</button>
-          <button class={`pill ${advanced ? 'solid' : 'outline'}`} aria-pressed={advanced} onClick={() => { setAdvanced(!advanced); setPickFor(null) }} disabled={athletes.length < 2}>
-            Vagues
-          </button>
+          {!noWaves && (
+            <button class={`pill ${advanced ? 'solid' : 'outline'}`} aria-pressed={advanced} onClick={() => { setAdvanced(!advanced); setPickFor(null) }} disabled={athletes.length < 2}>
+              Vagues
+            </button>
+          )}
         </span>
       </div>
 

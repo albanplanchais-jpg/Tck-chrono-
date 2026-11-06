@@ -48,28 +48,32 @@ export function Courses({ courses, sessions, group, onSave, onDelete, onStartOn,
             <button class="btn primary" style={{ marginTop: 18 }} onClick={() => setForm('new')}><Icon name="plus" size={20} />Créer un parcours</button>
           </div>
         ) : (
-          <ul class="courses">
+          <ul class="course-cards">
             {courses.map((c) => {
               const st = stats.get(c.id)!
               return (
                 <li key={c.id}>
-                  <button class="course" onClick={() => setOpen(c.id)}>
-                    <span class="c-main">
-                      <b>{c.name}</b>
-                      <small>{[courseInfo(c), `${st.sessions.length} séance${st.sessions.length > 1 ? 's' : ''}`].filter(Boolean).join(' · ')}</small>
+                  <button class="course-card" onClick={() => setOpen(c.id)}>
+                    <span class="cc-top">
+                      <span class="cc-name"><b>{c.name}</b>{courseInfo(c) && <small>{courseInfo(c)}</small>}</span>
+                      <Icon name="right" size={18} />
                     </span>
-                    <span class="c-rec">
-                      {st.record ? (
-                        <>
-                          <small>Record</small>
-                          <b class="mono">{fmtDuration(st.record.best)}</b>
-                          <small>{st.record.athlete.name}</small>
-                        </>
-                      ) : (
-                        <small>Pas encore de temps</small>
-                      )}
+                    <TrackArt splits={c.splits ?? 0} />
+                    <span class="cc-foot">
+                      <span class="cc-rec">
+                        {st.record ? (
+                          <>
+                            <small>Record</small>
+                            <b class="mono">{fmtDuration(st.record.best)}</b>
+                            <small class="cc-who">{st.record.athlete.name}</small>
+                          </>
+                        ) : (
+                          <small>Pas encore de temps</small>
+                        )}
+                      </span>
+                      <span class="cc-num"><b class="mono">{st.sessions.length}</b><small>séance{st.sessions.length > 1 ? 's' : ''}</small></span>
+                      <span class="cc-num"><b class="mono">{st.board.length}</b><small>athlète{st.board.length > 1 ? 's' : ''}</small></span>
                     </span>
-                    <Icon name="right" size={18} />
                   </button>
                 </li>
               )
@@ -127,6 +131,10 @@ function CoursePage({ course, st, busy, onClose, onStart, onEdit, onDelete, onOp
       </header>
       <div class="scroll px">
         {course.notes && <p class="res-comment" style={{ marginTop: 0 }}>{course.notes}</p>}
+        <div class="course-hero">
+          <TrackArt splits={course.splits ?? 0} big />
+          <div class="ch-labels label"><span>Départ</span>{course.distance ? <span>{courseInfo(course).split(' · ')[0]}</span> : <span />}<span>Arrivée</span></div>
+        </div>
         <div class="statbox">
           <div><b class="mono">{st.record ? fmtDuration(st.record.best) : '—'}</b><span>Record</span></div>
           <div><b class="mono">{st.sessions.length}</b><span>Séances</span></div>
@@ -137,25 +145,49 @@ function CoursePage({ course, st, busy, onClose, onStart, onEdit, onDelete, onOp
         </button>
         {busy && <p class="note" style={{ marginTop: 8 }}>Une séance est déjà en cours.</p>}
 
-        <div class="sec-head"><h2>Meilleurs temps</h2><span class="label">{st.board.length} athlète{st.board.length > 1 ? 's' : ''}</span></div>
+        <div class="sec-head"><h2>Podium</h2><span class="label">{st.board.length} athlète{st.board.length > 1 ? 's' : ''}</span></div>
         {!st.board.length && <p class="muted">Lance une séance sur ce parcours pour remplir le classement.</p>}
-        <ol class="lboard">
-          {st.board.map((e, i) => (
-            <li key={e.athlete.id} class={i === 0 ? 'first' : ''}>
-              <button onClick={() => onOpenSession(e.session)}>
-                <span class="rk">{i + 1}</span>
-                <span class="g-name">
-                  <b>{e.athlete.bib !== undefined && <span class="bibn mono">{e.athlete.bib}</span>}{e.athlete.name}</b>
-                  <small>{fmtDay(e.session.createdAt)} · {e.runs} passage{e.runs > 1 ? 's' : ''}</small>
-                </span>
-                <span class="g-time mono">
-                  {fmtDuration(e.best)}
-                  {i > 0 && <small class="gap mono">+{fmtDuration(e.best - st.board[0].best)}</small>}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
+        {st.board.length > 0 && (
+          <div class="podium">
+            {[1, 0, 2].map((i) => {
+              const e = st.board[i]
+              if (!e) return <span key={i} class="pod empty" />
+              return (
+                <button key={i} class={`pod p${i + 1}`} onClick={() => onOpenSession(e.session)}>
+                  <span class="pod-name">{e.athlete.bib !== undefined && <span class="bibn mono">{e.athlete.bib}</span>}{e.athlete.name}</span>
+                  <span class="pod-time mono">{fmtDuration(e.best)}</span>
+                  {i > 0 && <span class="pod-gap mono">+{fmtDuration(e.best - st.board[0].best)}</span>}
+                  <span class="pod-step"><b>{i + 1}</b></span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        <Progress sessions={st.sessions} record={st.record?.best} />
+
+        {st.board.length > 3 && (
+          <>
+            <div class="sec-head"><h2>Classement</h2></div>
+            <ol class="lboard" start={4}>
+              {st.board.slice(3).map((e, j) => (
+                <li key={e.athlete.id}>
+                  <button onClick={() => onOpenSession(e.session)}>
+                    <span class="rk">{j + 4}</span>
+                    <span class="g-name">
+                      <b>{e.athlete.bib !== undefined && <span class="bibn mono">{e.athlete.bib}</span>}{e.athlete.name}</b>
+                      <small>{fmtDay(e.session.createdAt)} · {e.runs} passage{e.runs > 1 ? 's' : ''}</small>
+                    </span>
+                    <span class="g-time mono">
+                      {fmtDuration(e.best)}
+                      <small class="gap mono">+{fmtDuration(e.best - st.board[0].best)}</small>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
 
         <div class="sec-head"><h2>Séances</h2></div>
         {!st.sessions.length && <p class="muted">Aucune séance sur ce parcours.</p>}
@@ -230,5 +262,58 @@ function CourseForm({ course, onClose, onSave }: { course?: Course; onClose: () 
         <button class="btn primary" type="submit">{course ? 'Enregistrer' : 'Créer le parcours'}</button>
       </form>
     </div>
+  )
+}
+
+/** Tracé du parcours : une rivière du départ (rond) à l'arrivée (drapeau), avec les inters. */
+function TrackArt({ splits, big }: { splits: number; big?: boolean }) {
+  const W = 300, H = big ? 70 : 44, mid = H / 2, amp = big ? 14 : 9
+  const y = (x: number) => mid + amp * Math.sin(((x - 14) / (W - 28)) * Math.PI * 2.2)
+  const pts = Array.from({ length: 61 }, (_, i) => { const x = 14 + ((W - 28) * i) / 60; return `${x.toFixed(1)},${y(x).toFixed(1)}` })
+  const inters = Array.from({ length: splits }, (_, i) => 14 + ((W - 28) * (i + 1)) / (splits + 1))
+  const fx = W - 14
+  return (
+    <svg class={`track-art ${big ? 'big' : ''}`} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={pts.join(' ')} fill="none" stroke="currentColor" stroke-opacity=".16" stroke-width={big ? 16 : 11} stroke-linecap="round" stroke-linejoin="round" />
+      <polyline points={pts.join(' ')} fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="1 7" stroke-linecap="round" />
+      {inters.map((x, i) => (
+        <g key={i}>
+          <line x1={x} y1={y(x) - 9} x2={x} y2={y(x) + 9} stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+          {big && <text x={x} y={y(x) - 13} text-anchor="middle" class="ta-t">INT{i + 1}</text>}
+        </g>
+      ))}
+      <circle cx="14" cy={y(14)} r="6" fill="currentColor" />
+      <line x1={fx} y1={y(fx) + 8} x2={fx} y2={y(fx) - 16} stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+      <path d={`M${fx} ${y(fx) - 16} h11 l-3 4.5 l3 4.5 h-11 z`} fill="currentColor" />
+    </svg>
+  )
+}
+
+/** Progression : meilleur temps de chaque séance sur ce parcours (de la plus ancienne à la plus récente). */
+function Progress({ sessions, record }: { sessions: Session[]; record?: number }) {
+  const pts = [...sessions].reverse().map((s) => ({ s, t: summarize(s).best?.time })).filter((p): p is { s: Session; t: number } => p.t !== undefined)
+  if (pts.length < 2 || record === undefined) return null
+  const W = 300, H = 120, px = 10, top = 14, bottom = 22
+  const min = Math.min(...pts.map((p) => p.t)), max = Math.max(...pts.map((p) => p.t))
+  const span = max - min || 1
+  const X = (i: number) => px + ((W - 2 * px) * i) / (pts.length - 1)
+  // Plus rapide = plus haut.
+  const Y = (t: number) => top + ((t - min) / span) * (H - top - bottom)
+  const line = pts.map((p, i) => `${X(i).toFixed(1)},${Y(p.t).toFixed(1)}`).join(' ')
+  return (
+    <>
+      <div class="sec-head"><h2>Progression</h2><span class="label">Meilleur temps par séance</span></div>
+      <div class="progress-card">
+        <svg viewBox={`0 0 ${W} ${H}`} class="progress" role="img" aria-label={`Meilleurs temps de ${pts.length} séances, record ${fmtDuration(record)}`}>
+          <line x1={px} x2={W - px} y1={Y(record)} y2={Y(record)} class="pg-rec" />
+          <polygon points={`${X(0)},${H - bottom} ${line} ${X(pts.length - 1)},${H - bottom}`} class="pg-area" />
+          <polyline points={line} class="pg-line" />
+          {pts.map((p, i) => <circle key={p.s.id} cx={X(i)} cy={Y(p.t)} r={p.t === record ? 5 : 3.5} class={p.t === record ? 'pg-dot rec' : 'pg-dot'} />)}
+          <text x={px} y={H - 6} class="pg-t">{fmtDay(pts[0].s.createdAt)}</text>
+          <text x={W - px} y={H - 6} class="pg-t" text-anchor="end">{fmtDay(pts[pts.length - 1].s.createdAt)}</text>
+        </svg>
+        <div class="pg-legend mono"><span>Record {fmtDuration(record)}</span><span>Plus lent {fmtDuration(max)}</span></div>
+      </div>
+    </>
   )
 }
