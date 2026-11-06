@@ -142,7 +142,7 @@ export function AthleteHome({ user }: { user: User }) {
       ) : (
         <AthleteProfile user={user} profile={profile} onLinked={load} />
       )}
-      <nav class="tabbar two" aria-label="Navigation">
+      <nav class="tabbar two" aria-label="Navigation" style={{ '--i': tab === 'results' ? 0 : 1, '--n': 2 }}>
         <button class={tab === 'results' ? 'on' : ''} onClick={() => setTab('results')}><Icon name="stopwatch" size={22} stroke={2} /><span>Résultats</span></button>
         <button class={tab === 'profile' ? 'on' : ''} onClick={() => setTab('profile')}><Icon name="user" size={22} stroke={2} /><span>Profil</span></button>
       </nav>

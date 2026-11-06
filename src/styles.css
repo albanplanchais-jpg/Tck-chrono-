@@ -893,3 +893,46 @@ a.btn { text-decoration: none; color: inherit; }
 .board.crowded .rows.dense li { height: 30px; }
 .board.crowded .rows.dense .act { height: 28px; }
 .board.crowded .tap-dock { height: min(124px, 15vh); margin-top: 4px; }
+
+/* ——— Barre d'onglets « Liquid Glass » : capsule flottante translucide ——— */
+.shell { position: relative; --tb: calc(env(safe-area-inset-bottom) + 88px); }
+.shell .scroll { padding-bottom: var(--tb); }
+.shell .scroll:has(~ .bottom) { padding-bottom: 0; }
+.shell .bottom { padding-bottom: calc(var(--tb) + 2px); }
+.shell .layer .scroll { padding-bottom: 0; }
+.tabbar {
+  position: absolute; z-index: 6;
+  left: 14px; right: 14px; bottom: calc(env(safe-area-inset-bottom) + 10px);
+  height: 68px; padding: 4px; border: 0; border-radius: 34px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.04) 45%, rgba(255,255,255,.07) 100%),
+    rgba(30, 30, 32, .48);
+  -webkit-backdrop-filter: blur(24px) saturate(190%) brightness(1.1);
+  backdrop-filter: blur(24px) saturate(190%) brightness(1.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    inset 0 -1px 1px rgba(255,255,255,.08),
+    inset 0 0 0 .5px rgba(255,255,255,.22),
+    0 12px 32px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.4);
+  isolation: isolate;
+}
+/* Pastille de verre qui glisse sous l'onglet actif */
+.tabbar::before {
+  content: ''; position: absolute; z-index: -1; top: 4px; bottom: 4px;
+  width: calc((100% - 8px) / var(--n, 5));
+  left: calc(4px + (100% - 8px) / var(--n, 5) * var(--i, 0));
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,.10));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.08), inset 0 0 0 .5px rgba(255,255,255,.2), 0 2px 10px rgba(0,0,0,.25);
+  transition: left 420ms cubic-bezier(.34, 1.45, .5, 1);
+}
+.tabbar button { height: 60px; border-radius: 30px; color: rgba(255,255,255,.66); transition: color 200ms, transform 160ms; }
+.tabbar button:active { transform: scale(.92); }
+.tabbar button.on { color: var(--white); }
+.tabbar button.on::before { display: none; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tabbar { background: rgba(24, 24, 26, .96); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .tabbar { background: #1c1c1e; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

@@ -12,7 +12,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 export function TabBar({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
   return (
-    <nav class="tabbar" aria-label="Navigation">
+    <nav class="tabbar" aria-label="Navigation" style={{ '--i': Math.max(0, TABS.findIndex((t) => t.id === tab)), '--n': TABS.length }}>
       {TABS.map((t) => (
         <button key={t.id} class={tab === t.id ? 'on' : ''} aria-current={tab === t.id ? 'page' : undefined} onClick={() => onChange(t.id)}>
           <Icon name={t.icon} size={22} stroke={2} />
