@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'preact/hooks'
 import { uid, type Athlete, type Course, type Session } from '../core/model'
-import { athleteCourseBests, athleteStats, type AthleteStats } from '../core/stats'
+import { athleteCourseBests, athleteStats, sameAthlete, type AthleteStats } from '../core/stats'
 import { fmtDay, fmtDuration } from '../core/format'
 import { label, parseBib } from '../core/startOrder'
 import { archiveAthlete, saveAthletes } from '../cloud/history'
 import { Icon } from '../components/Icon'
+import { LinksPanel } from '../components/LinksPanel'
+import { supabase } from '../cloud/supabase'
+import type { Link } from '../cloud/links'
 
 interface Props {
   group: Athlete[]
@@ -27,6 +30,15 @@ export function Athletes({ group, sessions, courses, onAddAthlete, onRemoveAthle
     ? stats.filter((s) => `${s.athlete.bib ?? ''} ${s.athlete.name}`.toLowerCase().includes(q.trim().toLowerCase()))
     : stats
   const open = stats.find((s) => s.athlete.id === openId)
+
+  // Athlète relié (compte) : ajouté au groupe s'il n'y est pas déjà (même licence ou même nom).
+  const syncLinked = (links: Link[]) => {
+    const fresh = links
+      .map((l): Athlete => ({ id: uid(), name: l.name.slice(0, 40), ...(l.licence ? { licence: l.licence } : {}), ...(l.club ? { club: l.club } : {}) }))
+      .filter((a) => !group.some((g) => sameAthlete(g, a)))
+    fresh.forEach(onAddAthlete)
+    if (fresh.length) saveAthletes(fresh)
+  }
 
   const add = (e: Event) => {
     e.preventDefault()
@@ -85,6 +97,13 @@ export function Athletes({ group, sessions, courses, onAddAthlete, onRemoveAthle
         </ul>
         {!adding && (
           <button class="soft-btn" onClick={() => setAdding(true)}><Icon name="plus" size={18} stroke={2.6} />Ajouter un athlète</button>
+        )}
+
+        {supabase && (
+          <>
+            <div class="sec-head"><h2>Comptes athlètes</h2></div>
+            <LinksPanel role="coach" onLinks={syncLinked} />
+          </>
         )}
         <div style={{ height: 24 }} />
       </div>

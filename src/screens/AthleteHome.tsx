@@ -9,6 +9,8 @@ import { signOut } from '../cloud/auth'
 import { toSession } from '../cloud/history'
 import { Results } from './Results'
 import { Icon } from '../components/Icon'
+import { FindMe } from '../components/FindMe'
+import { LinksPanel } from '../components/LinksPanel'
 
 interface Profile { name: string | null; licence: string | null; club: string | null }
 
@@ -78,10 +80,12 @@ export function AthleteHome({ user }: { user: User }) {
               </div>
               <button class="icon-btn" onClick={load} aria-label="Actualiser"><Icon name="undo" size={18} /></button>
             </header>
-            {!profile?.licence && (
-              <button class="note-btn" onClick={() => setTab('profile')}>
-                Relie ton compte à ta licence FFCK pour retrouver tous tes chronos, même si ton nom est écrit autrement. <b>Relier →</b>
-              </button>
+            {state !== 'loading' && profile && !profile.licence && (
+              <section class="find-card">
+                <h2>Retrouve-toi</h2>
+                <p>Tape ton prénom et ton nom : relie ton compte à ta licence pour retrouver tous tes chronos, même si ton nom est écrit autrement.</p>
+                <FindMe defaultName={profile.name} onLinked={() => load()} />
+              </section>
             )}
             <div class="statbox tfirst">
               <div><b class="mono">{best.length ? fmtDuration(Math.min(...best)) : '—'}</b><span>Meilleur</span></div>
@@ -151,23 +155,7 @@ export function AthleteHome({ user }: { user: User }) {
 }
 
 function AthleteProfile({ user, profile, onLinked }: { user: User; profile: Profile | null; onLinked: () => void }) {
-  const [licence, setLicence] = useState('')
-  const [nom, setNom] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-
-  const link = async (e: Event) => {
-    e.preventDefault()
-    setBusy(true)
-    setMsg(null)
-    const { data, error } = await supabase!.rpc('claim_licence', { p_licence: licence.trim(), p_nom: nom.trim() })
-    setBusy(false)
-    if (error) return setMsg({ ok: false, text: frError(error) })
-    const l = (data as any[])[0]
-    setMsg({ ok: true, text: `Compte relié à ${l.prenom} ${l.nom}${l.club ? ` (${l.club})` : ''}.` })
-    onLinked()
-  }
-
+  const [msg, setMsg] = useState('')
   return (
     <div class="screen tabbed">
       <div class="scroll px">
@@ -178,20 +166,15 @@ function AthleteProfile({ user, profile, onLinked }: { user: User; profile: Prof
         {profile?.licence ? (
           <p class="lic-linked"><b class="mono">n° {profile.licence}</b>{profile.club && <span>{profile.club}</span>}</p>
         ) : (
-          <form class="login-form" onSubmit={link} style={{ marginTop: 12 }}>
-            <label>
-              <span class="label">Numéro de licence</span>
-              <input value={licence} onInput={(e) => setLicence((e.target as HTMLInputElement).value)} inputMode="numeric" autocomplete="off" required />
-            </label>
-            <label>
-              <span class="label">Nom de famille</span>
-              <input value={nom} onInput={(e) => setNom((e.target as HTMLInputElement).value)} autocapitalize="characters" autocomplete="family-name" required />
-            </label>
-            {msg && <p class={`form-msg ${msg.ok ? '' : 'err'}`} role="status">{msg.text}</p>}
-            <button class="btn primary" type="submit" disabled={busy}>Relier ma licence</button>
-          </form>
+          <>
+            <p class="muted" style={{ marginTop: 6 }}>Retrouve-toi dans la liste des licenciés.</p>
+            <FindMe defaultName={profile?.name} onLinked={(m) => { setMsg(m); onLinked() }} />
+          </>
         )}
-        {msg?.ok && profile?.licence && <p class="form-msg">{msg.text}</p>}
+        {msg && <p class="form-msg" role="status" style={{ marginTop: 10 }}>{msg}</p>}
+
+        <div class="sec-head"><h2>Mes coachs</h2></div>
+        <LinksPanel role="athlete" />
 
         <div class="sec-head"><h2>Confidentialité</h2></div>
         <p class="privacy">

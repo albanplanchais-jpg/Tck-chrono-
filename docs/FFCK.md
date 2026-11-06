@@ -31,6 +31,10 @@ Adaptateur `scripts/ffck-sync/sources/classement.mjs` pour le site indépendant 
 - Table `licensees` et fichier `licencies.json.gz` dans un **bucket Supabase privé** (`ffck`) : jamais publics, jamais indexables.
 - Le fichier n'est téléchargeable **que par les coachs validés** (table `coach_approvals`). Un compte créé librement n'y a pas accès.
 - Un athlète ne peut vérifier **que sa propre licence** (n° de licence + nom de famille).
+- « Retrouve-toi » (`find_licensee`) : il faut le **nom de famille complet** + au moins 2 lettres du prénom, 5 résultats au plus :
+  impossible de parcourir la liste. (Les n° de licence sont de toute façon publics sur le site du classement.)
+- Liens coach ↔ athlète (`coach_links`, migration 0009) : une demande ne devient un lien qu'une fois **acceptée** par l'autre ;
+  chacun peut retirer le lien. Les recherches de comptes ne renvoient que nom et club (+ licence vue par un coach), 10 au plus.
 - Les identifiants FFCK et la clé de service Supabase ne sont que dans les **secrets GitHub**, jamais dans le code ni dans la PWA.
 - Les séances chronométrées sont visibles par les **comptes connectés** de l'app (coachs et athlètes), jamais publiquement.
 

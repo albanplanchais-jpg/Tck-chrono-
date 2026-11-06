@@ -1023,3 +1023,26 @@ a.btn { text-decoration: none; color: inherit; }
 .datebox { border: 0; border-radius: 16px; background: var(--glass); box-shadow: var(--glass-edge); }
 .bibn { border-radius: 7px; }
 .seg-sm button, .seg-sm.two button, .seg-sm.kinds button { height: 44px; }
+
+/* ——— Retrouve-toi & liens coach ↔ athlète ——— */
+.find-card { margin: 4px 0 16px; padding: 18px 16px 12px; border-radius: 26px; background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); box-shadow: var(--glass-edge), var(--glass-shadow); }
+.find-card h2 { margin: 0 0 6px; font-size: 24px; font-weight: 900; }
+.find-card > p { margin: 0 0 14px; font-size: 15px; line-height: 1.45; color: #ccc; }
+.findme .row2 { gap: 10px; }
+.findme .row2 label { min-width: 0; }
+.findme .row2 input { min-width: 0; width: 100%; }
+.find-none { font-size: 14px; line-height: 1.45; margin: 12px 0 0; }
+.find-manual { display: block; margin: 8px auto 0; height: 44px; }
+.find-list, .link-list { margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.find-list li, .link-list li { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 8px 8px 8px 16px; border-radius: 20px; background: var(--glass); box-shadow: var(--glass-edge); }
+.link-list li.incoming { box-shadow: var(--glass-edge), inset 0 0 0 1.5px rgba(255,255,255,.6); }
+.fm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fm-main b { font-size: 17px; font-weight: 800; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-main small { font-size: 13px; color: var(--g4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.find-list .pill, .link-list .pill { padding: 0 16px; font-family: var(--font); font-size: 15px; letter-spacing: 0; text-transform: none; }
+.link-acts { display: flex; gap: 8px; align-items: center; }
+.link-list .link.dim { height: 44px; padding: 0 10px; }
+.links-cap { margin: 14px 0 0; }
+.links .search { margin-top: 14px; border: 0; border-radius: 18px; background: var(--glass); box-shadow: var(--glass-edge); padding: 0 16px; }
+.login-form input, .join input { border: 0; border-radius: 16px; background: var(--glass); box-shadow: var(--glass-edge); }
+.login-form input:focus, .join input:focus, .links .search:focus, .field input:focus { box-shadow: var(--glass-edge), inset 0 0 0 2px var(--white); }
